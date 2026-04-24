@@ -1,0 +1,56 @@
+server:
+  port: 8086
+  servlet:
+    context-path: /api/anti-fraud
+
+management:
+  server:
+    port: 8186
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/postgres
+    username: postgres
+    password: password
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  liquibase:
+    default-schema: anti_fraud
+    change-log: db/changelog/db.changelog-master.yaml
+    enabled: true
+  application:
+    name: anti-fraud-app
+  cloud:
+    kubernetes:
+      enabled: false
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: anti-fraud-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.bank.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

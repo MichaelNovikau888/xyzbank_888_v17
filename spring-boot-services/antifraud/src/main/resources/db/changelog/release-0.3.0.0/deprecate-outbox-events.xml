@@ -1,0 +1,34 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Release 0.3.0.0 — пометка outbox_events как устаревшей.
+
+        Контекст:
+          AntifraudOutboxHelper был удалён, т.к. топик suspicious-transfers.result
+          был мёртвым — никто не слушал. Antifraud-ответ теперь отправляется
+          напрямую через SuspiciousTransferProducer при обработке Kafka-запроса.
+
+          Таблица outbox_events оставлена для обратной совместимости (нет DML).
+          OutboxRelayScheduler всегда найдёт пустой список — работает как no-op.
+
+          В следующем major-релизе:
+            DROP TABLE outbox_events;
+            DROP INDEX idx_antifraud_outbox_pending;
+    -->
+
+    <changeSet id="antifraud-outbox-deprecate-0.3.0.0" author="xyz-bank">
+        <setTableRemarks tableName="outbox_events"
+                         remarks="DEPRECATED since 0.3.0.0. AntifraudOutboxHelper removed — topic suspicious-transfers.result was dead. Antifraud responses now sent directly via SuspiciousTransferProducer. Table kept for schema compatibility; will be dropped in next major release."/>
+        <rollback>
+            <setTableRemarks tableName="outbox_events"
+                             remarks="Transactional Outbox — исходящие события для Kafka"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

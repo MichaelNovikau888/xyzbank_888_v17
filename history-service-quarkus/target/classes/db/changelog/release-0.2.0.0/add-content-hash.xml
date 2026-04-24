@@ -1,0 +1,33 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <!--
+        Добавляем content_hash для идемпотентности Kafka-консьюмера.
+        SHA-256 от (serviceName | eventType | eventData) — 64 символа (hex).
+        Уникальный индекс предотвращает дубли на уровне БД.
+        nullable=true для обратной совместимости с уже существующими записями.
+    -->
+    <changeSet author="xyz-bank" id="history-content-hash-2024-001">
+        <addColumn tableName="history" schemaName="history">
+            <column name="content_hash" type="VARCHAR(64)"
+                    remarks="SHA-256 хэш события для идемпотентности Kafka at-least-once"/>
+        </addColumn>
+        <createIndex tableName="history" schemaName="history"
+                     indexName="idx_history_content_hash"
+                     unique="true">
+            <column name="content_hash"/>
+        </createIndex>
+        <!-- Partial unique index: NULL разрешён для старых записей без хэша -->
+        <sql>
+            DROP INDEX IF EXISTS history.idx_history_content_hash;
+            CREATE UNIQUE INDEX idx_history_content_hash
+            ON history.history (content_hash)
+            WHERE content_hash IS NOT NULL;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

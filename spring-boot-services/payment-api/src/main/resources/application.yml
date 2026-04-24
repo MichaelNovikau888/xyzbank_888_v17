@@ -1,0 +1,69 @@
+server:
+  port: 8079
+
+spring:
+  application:
+    name: payment-api
+  datasource:
+    url: jdbc:postgresql://localhost:5433/postgres
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        default_schema: fastpay
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+
+logging:
+  level:
+    com.bank: INFO
+    org.springframework.kafka: WARN
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# Секретный ключ для SipHash-24 (идемпотент-ключи платежей).
+# k0 и k1 — два 64-битных числа (hex). Сгенерировать: openssl rand -hex 8
+# В проде заменить на значения из Vault / K8s Secret.
+payment:
+  idempotency:
+    sip-hash-k0: 0x9a4bf3c8e2d71f05
+    sip-hash-k1: 0x3c7e2d8b4f1a9e06
+
+# JWT: секрет для верификации токенов, выпущенных authorization-service.
+# ДОЛЖЕН совпадать с app.jwt.secret-key в authorization-service.
+# В проде — из Vault / K8s Secret.
+app:
+  jwt:
+    secret-key: bmF3RUZlWVlLUFR4akRaT0YrZW9lcG1QemErQ0xoSmQrZzltM0dIY3Zyb0E=

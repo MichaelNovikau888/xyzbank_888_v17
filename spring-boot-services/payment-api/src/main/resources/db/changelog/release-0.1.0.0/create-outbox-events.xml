@@ -1,0 +1,41 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <changeSet author="xyz-bank" id="outbox-2024-001">
+        <createTable tableName="outbox_events" schemaName="fastpay"
+                     remarks="Transactional Outbox — исходящие события для Kafka">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="outbox_events_pkey"/>
+            </column>
+            <column name="topic" type="VARCHAR(200)" remarks="Kafka-топик назначения">
+                <constraints nullable="false"/>
+            </column>
+            <column name="partition_key" type="VARCHAR(100)" remarks="Ключ партиционирования"/>
+            <column name="event_type" type="VARCHAR(100)" remarks="Тип события">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="TEXT" remarks="JSON-сериализованный payload">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="TIMESTAMP WITHOUT TIME ZONE"
+                    remarks="NULL = не отправлено, NOT NULL = отправлено успешно"/>
+            <column name="attempts" type="INT" defaultValueNumeric="0"
+                    remarks="Количество попыток отправки">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="outbox_events" schemaName="fastpay"
+                     indexName="idx_outbox_pending">
+            <column name="sent_at"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

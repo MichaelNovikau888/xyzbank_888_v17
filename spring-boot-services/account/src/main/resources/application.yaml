@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: account-app
+  profiles:
+    active: local
+kafka:
+  groups:
+    account: account-group
+    audit: audit-group
+  topics:
+    account-create: account.create
+    account-update: account.update
+    account-delete: account.delete
+    account-get: account.get
+    account-get-by-id: account.getById
+    error-logs: error.logs
+    audit-logs: audit.logs
+    external-account-create: external.account.create
+    external-account-update: external.account.update
+    external-account-delete: external.account.delete
+    external-account-get: external.account.get
+    external-account-get-by-id: external.account.getById
+    auth-validate: auth.validate
+    auth-validate-response: auth.validate.response
+  header: Authorization
+audit:
+  default-user: SYSTEM
+  entity-type: ACCOUNT
+

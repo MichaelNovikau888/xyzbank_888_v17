@@ -1,0 +1,25 @@
+# Test settings -- real values are injected via @DynamicPropertySource
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none   # Liquibase manages the schema
+    show-sql: true
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+logging:
+  level:
+    com.bank: DEBUG
+    org.testcontainers: INFO
+
+# Тестовые ключи SipHash-24 (не использовать в продакшене)
+payment:
+  idempotency:
+    sip-hash-k0: 0x1122334455667788
+    sip-hash-k1: 0x99aabbccddeeff00
+
+# JWT: тестовый секрет (Base64 от "test-secret-key-at-least-32-bytes!!")
+app:
+  jwt:
+    secret-key: dGVzdC1zZWNyZXQta2V5LWF0LWxlYXN0LTMyLWJ5dGVzISE=

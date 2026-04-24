@@ -1,0 +1,8 @@
+<!ELEMENT module (module|property|metadata|message)*>
+<!ATTLIST module name NMTOKEN #REQUIRED>
+<!ELEMENT property EMPTY>
+<!ATTLIST property name NMTOKEN #REQUIRED value CDATA #REQUIRED default CDATA #IMPLIED>
+<!ELEMENT metadata EMPTY>
+<!ATTLIST metadata name NMTOKEN #REQUIRED value CDATA #REQUIRED>
+<!ELEMENT message EMPTY>
+<!ATTLIST message key NMTOKEN #REQUIRED value CDATA #REQUIRED>

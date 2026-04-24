@@ -1,0 +1,67 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <!--
+        Рефакторинг: card_number BIGINT → VARCHAR(19), phone_number BIGINT → VARCHAR(20).
+        Причина: номер карты — 16–19 цифр (длиннее Long.MAX_VALUE = 19 цифр),
+                 телефон — международный формат +7XXXXXXXXXX (11 цифр + символы).
+        BIGINT → VARCHAR через CAST без потери данных.
+    -->
+
+    <!-- card_number: снять ограничение → изменить тип → восстановить -->
+    <changeSet author="xyz-bank" id="transfer-card-number-to-varchar-2024-001">
+        <dropUniqueConstraint tableName="card_transfer"
+                              constraintName="card_transfer_card_number_key"/>
+        <modifyDataType tableName="card_transfer"
+                        columnName="card_number"
+                        newDataType="VARCHAR(19)"/>
+        <addUniqueConstraint tableName="card_transfer"
+                             columnNames="card_number"
+                             constraintName="card_transfer_card_number_key"/>
+    </changeSet>
+
+    <!-- phone_number: BIGINT → VARCHAR(20) (международный формат) -->
+    <changeSet author="xyz-bank" id="transfer-phone-number-to-varchar-2024-001">
+        <modifyDataType tableName="phone_transfer"
+                        columnName="phone_number"
+                        newDataType="VARCHAR(20)"/>
+    </changeSet>
+
+    <!-- status колонка для переводов (Задача 3: уведомления) -->
+    <changeSet author="xyz-bank" id="transfer-add-status-2024-001">
+        <addColumn tableName="account_transfer">
+            <column name="status" type="VARCHAR(20)" defaultValue="CREATED">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="card_transfer">
+            <column name="status" type="VARCHAR(20)" defaultValue="CREATED">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="phone_transfer">
+            <column name="status" type="VARCHAR(20)" defaultValue="CREATED">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- client_id колонка для переводов (нужна notification-service) -->
+    <changeSet author="xyz-bank" id="transfer-add-client-id-2024-001">
+        <addColumn tableName="account_transfer">
+            <column name="client_id" type="VARCHAR(100)"/>
+        </addColumn>
+        <addColumn tableName="card_transfer">
+            <column name="client_id" type="VARCHAR(100)"/>
+        </addColumn>
+        <addColumn tableName="phone_transfer">
+            <column name="client_id" type="VARCHAR(100)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

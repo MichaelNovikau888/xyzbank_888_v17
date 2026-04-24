@@ -1,0 +1,1950 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.3.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "XYZ-Bank — бизнес-метрики всех микросервисов",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "💳 Payment API",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(payment_created_total[$__rate_interval])) by (currency)",
+          "legendFormat": "created {{currency}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(payment_failed_total[$__rate_interval])",
+          "legendFormat": "failed"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(payment_idempotent_hits_total[$__rate_interval])",
+          "legendFormat": "idempotent hits"
+        }
+      ],
+      "title": "Payment Rate (created / failed / idempotent)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "payment_pending_count",
+          "legendFormat": "pending"
+        }
+      ],
+      "title": "Pending Payments",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(payment_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(payment_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(payment_processing_duration_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "title": "Payment Processing Latency (p50 / p95 / p99)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 101,
+      "title": "🔄 Transfer Service",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "id": 10,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(transfer_saved_total[$__rate_interval])) by (type)",
+          "legendFormat": "saved {{type}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(transfer_idempotent_skipped_total[$__rate_interval])) by (type)",
+          "legendFormat": "skipped {{type}}"
+        }
+      ],
+      "title": "Transfer Rate by Type (saved / skipped)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 5
+          },
+          "unit": "currencyRUB"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "id": 11,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(transfer_amount_summary_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "amount p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(transfer_amount_summary_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "amount p95"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(transfer_amount_summary_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "amount p99"
+        }
+      ],
+      "title": "Transfer Amount Distribution (p50 / p95 / p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.15
+              }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "id": 12,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "minVizWidth": 75,
+        "minVizHeight": 75
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(transfer_idempotent_skipped_total[$__rate_interval])) / (sum(rate(transfer_saved_total[$__rate_interval])) + sum(rate(transfer_idempotent_skipped_total[$__rate_interval])))",
+          "legendFormat": "duplicate rate"
+        }
+      ],
+      "title": "Transfer Duplicate Rate",
+      "type": "gauge"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 102,
+      "title": "🛡️ Antifraud Service",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "id": 20,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(antifraud_analyzed_total[$__rate_interval])) by (type)",
+          "legendFormat": "analyzed {{type}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(antifraud_blocked_total[$__rate_interval])) by (type)",
+          "legendFormat": "blocked {{type}}"
+        }
+      ],
+      "title": "Antifraud Rate (analyzed / blocked by type)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.3
+              }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "id": 21,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "minVizWidth": 75,
+        "minVizHeight": 75
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(antifraud_blocked_total[$__rate_interval])) / sum(rate(antifraud_analyzed_total[$__rate_interval]))",
+          "legendFormat": "block ratio"
+        }
+      ],
+      "title": "Suspicious Ratio (blocked/analyzed)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 20
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "id": 22,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(antifraud_blocked_in_db) by (type)",
+          "legendFormat": "in DB {{type}}"
+        }
+      ],
+      "title": "Blocked Transfers in DB (Gauge by type)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 103,
+      "title": "🔐 Authorization Service",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "id": 30,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(auth_login_success_total[$__rate_interval])",
+          "legendFormat": "login success"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(auth_login_failed_total[$__rate_interval])",
+          "legendFormat": "login failed"
+        }
+      ],
+      "title": "Auth Login Rate (success / failed)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "id": 31,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(auth_token_valid_total[$__rate_interval])",
+          "legendFormat": "token valid"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(auth_token_invalid_total[$__rate_interval])",
+          "legendFormat": "token invalid"
+        }
+      ],
+      "title": "Token Validation Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 28
+      },
+      "id": 32,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(auth_login_failed_total[5m])",
+          "legendFormat": "failed logins / sec"
+        }
+      ],
+      "title": "⚠️ Brute-Force Indicator (login failures/s)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 104,
+      "title": "🏦 Account Service",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 37
+      },
+      "id": 40,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_created_total[$__rate_interval])",
+          "legendFormat": "created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_updated_total[$__rate_interval])",
+          "legendFormat": "updated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_deleted_total[$__rate_interval])",
+          "legendFormat": "deleted"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_idempotent_skipped_total[$__rate_interval])",
+          "legendFormat": "idempotent skipped"
+        }
+      ],
+      "title": "Account Operations Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 37
+      },
+      "id": 41,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(credit_card_issued_total[$__rate_interval])",
+          "legendFormat": "issued"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(credit_card_blocked_total[$__rate_interval])",
+          "legendFormat": "blocked"
+        }
+      ],
+      "title": "Credit Card Events Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 37
+      },
+      "id": 42,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "account_total_count",
+          "legendFormat": "accounts"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "credit_card_total_count",
+          "legendFormat": "credit cards"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "auth_users_total",
+          "legendFormat": "users"
+        }
+      ],
+      "title": "Entity Counts (Gauges)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "id": 105,
+      "title": "📦 Outbox Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "id": 50,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(outbox_relay_sent_total[$__rate_interval])) by (service)",
+          "legendFormat": "sent {{service}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(outbox_relay_failed_total[$__rate_interval])) by (service)",
+          "legendFormat": "failed {{service}}"
+        }
+      ],
+      "title": "Outbox Relay Rate (sent / failed)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "id": 51,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "outbox_pending_events_count{service=\"payment-api\"}",
+          "legendFormat": "payment-api"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "outbox_pending_events_count{service=\"transfer\"}",
+          "legendFormat": "transfer"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "outbox_pending_events_count{service=\"antifraud\"}",
+          "legendFormat": "antifraud"
+        }
+      ],
+      "title": "Pending Outbox Events (unsent)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 106,
+      "title": "📊 Report Service (Quarkus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 37
+      },
+      "id": 60,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(report_payments_stored_total[$__rate_interval])",
+          "legendFormat": "stored"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(report_kafka_duplicate_total[$__rate_interval])",
+          "legendFormat": "kafka duplicates"
+        }
+      ],
+      "title": "Payments Stored Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 37
+      },
+      "id": 61,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(report_csv_generated_total[$__rate_interval])",
+          "legendFormat": "generated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(report_csv_failed_total[$__rate_interval])",
+          "legendFormat": "failed"
+        }
+      ],
+      "title": "CSV Report Rate (generated / failed)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 37
+      },
+      "id": 62,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.50, sum(rate(report_csv_generation_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum(rate(report_csv_generation_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(report_csv_generation_seconds_bucket[$__rate_interval])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "title": "CSV Generation Latency (p50 / p95 / p99)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 107,
+      "title": "🔔 Notification Service (Quarkus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 47
+      },
+      "id": 63,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(notification_emails_sent_total[$__rate_interval])) by (event_type)",
+          "legendFormat": "sent {{event_type}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(notification_emails_failed_total[$__rate_interval])",
+          "legendFormat": "failed"
+        }
+      ],
+      "title": "Email Notification Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 47
+      },
+      "id": 64,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(notification_idempotent_skipped_total[$__rate_interval])",
+          "legendFormat": "skipped"
+        }
+      ],
+      "title": "Idempotent Skipped Rate (duplicate Kafka events)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 47
+      },
+      "id": 65,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(notification_emails_failed_total[5m])",
+          "legendFormat": "failures/s"
+        }
+      ],
+      "title": "⚠️ Email Failure Rate (last 5m)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 108,
+      "title": "📜 History Service (Quarkus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
+      "id": 66,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(history_events_saved_total[$__rate_interval])",
+          "legendFormat": "saved"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(history_idempotent_skipped_total[$__rate_interval])",
+          "legendFormat": "skipped"
+        }
+      ],
+      "title": "Events Saved / Skipped Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
+      "id": 67,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum(rate(history_kafka_received_total[$__rate_interval])) by (source)",
+          "legendFormat": "{{source}}"
+        }
+      ],
+      "title": "Kafka Events Received by Source",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
+      "id": 68,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(history_dlq_events_total[5m])",
+          "legendFormat": "DLQ last 5m"
+        }
+      ],
+      "title": "⚠️ DLQ Events Received",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "id": 109,
+      "title": "👤 Profile Service (Quarkus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 67
+      },
+      "id": 69,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(profile_created_total[$__rate_interval])",
+          "legendFormat": "created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(profile_updated_total[$__rate_interval])",
+          "legendFormat": "updated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(profile_deleted_total[$__rate_interval])",
+          "legendFormat": "deleted"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(profile_idempotent_skipped_total[$__rate_interval])",
+          "legendFormat": "skipped"
+        }
+      ],
+      "title": "Profile CRUD Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 67
+      },
+      "id": 70,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_details_created_total[$__rate_interval])",
+          "legendFormat": "created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_details_updated_total[$__rate_interval])",
+          "legendFormat": "updated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_details_deleted_total[$__rate_interval])",
+          "legendFormat": "deleted"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(account_details_idempotent_skipped_total[$__rate_interval])",
+          "legendFormat": "skipped"
+        }
+      ],
+      "title": "AccountDetails CRUD Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 67
+      },
+      "id": 71,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "profile_created_total - profile_deleted_total",
+          "legendFormat": "profiles"
+        }
+      ],
+      "title": "Total Profiles (Gauge)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "id": 110,
+      "title": "🏦 Public Info Service (Quarkus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 77
+      },
+      "id": 72,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_bank_details_created_total[$__rate_interval])",
+          "legendFormat": "bank created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_bank_details_updated_total[$__rate_interval])",
+          "legendFormat": "bank updated"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_branch_created_total[$__rate_interval])",
+          "legendFormat": "branch created"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_atm_created_total[$__rate_interval])",
+          "legendFormat": "atm created"
+        }
+      ],
+      "title": "BankDetails / Branch / ATM CRUD Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10
+          },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 77
+      },
+      "id": 73,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_certificate_created_total[$__rate_interval])",
+          "legendFormat": "certificates"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(publicinfo_license_created_total[$__rate_interval])",
+          "legendFormat": "licenses"
+        }
+      ],
+      "title": "Certificate / License Created Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 77
+      },
+      "id": 74,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "increase(publicinfo_kafka_errors_total[5m])",
+          "legendFormat": "errors last 5m"
+        }
+      ],
+      "title": "⚠️ Kafka Errors",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "xyz-bank",
+    "business",
+    "microservices"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource",
+        "label": "Prometheus"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "XYZ-Bank Business Metrics",
+  "uid": "xyz-bank-business-v1",
+  "version": 1
+}

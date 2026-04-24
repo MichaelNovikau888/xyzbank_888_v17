@@ -1,0 +1,105 @@
+server:
+  port: 8087
+  error:
+    whitelabel:
+      enabled: false
+management:
+  server:
+    base-path: /actuator
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /actuator
+  endpoint:
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+#    url: jdbc:postgresql://localhost:5433/postgres
+#    username: postgres
+#    password: password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: '"authorization"' # Required for preliquibase to work correctly
+        format_sql: true
+  liquibase:
+    default-schema: authorization
+    change-log: db/changelog/db.changelog-master.yaml
+    enabled: true
+    drop-first: false
+  application:
+    name: authorization-app
+  kafka:
+#    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: authorization-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      trusted-packages: com.bank.authorization.dto
+    properties:
+      admin:
+        retries: 5
+
+app:
+  jwt:
+    secret-key: nawEFeYYKPTxjDZOF+eoepmPza+CLhJd+g9m3GHcvro=
+    expiration: 36000000
+
+logging:
+  level:
+    com.bank.authorization: INFO
+    org.apache.kafka: INFO
+    root: INFO
+    liquibase: INFO
+    net.lbruun.springboot.preliquibase: TRACE
+    org.springframework.jdbc.datasource.init: INFO
+    org.springframework.boot.autoconfigure: INFO
+    org.springframework.security: DEBUG
+    org.springframework.aop: DEBUG
+    io.micrometer.core: DEBUG
+  file:
+    name: authorization.log
+    path: logs
+  pattern:
+    file: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+
+topics:
+  error-logging: error.logs
+  auth_login: auth.login
+  auth_login_response: auth.login.response
+  auth_validate: auth.validate
+  auth_validate_response: auth.validate.response
+  user_create: user.create
+  user_create_response: user.create.response
+  user_update: user.update
+  user_update_response: user.update.response
+  user_delete: user.delete
+  user_delete_response: user.delete.response
+  user_get: user.get
+  user_get_response: user.get.response
+  user_get_all: user.get.all
+  user_get_all_response: user.get.all.response

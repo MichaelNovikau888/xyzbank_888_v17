@@ -1,0 +1,31 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <!--
+        Рефакторинг типа: account_number BIGINT → VARCHAR(20).
+        Причина: российский номер счёта = 20 цифр, Long.MAX_VALUE = 9_223_372_036_854_775_807 (19 цифр).
+        Хранение 20-значного числа в BIGINT невозможно.
+        Миграция безопасна: BIGINT → VARCHAR приводится через CAST без потери данных.
+    -->
+    <changeSet author="xyz-bank" id="transfer-account-number-to-varchar-2024-001">
+        <!-- Шаг 1: снять уникальное ограничение перед ALTER COLUMN -->
+        <dropUniqueConstraint tableName="account_transfer"
+                              constraintName="account_transfer_account_number_key"/>
+
+        <!-- Шаг 2: изменить тип колонки -->
+        <modifyDataType tableName="account_transfer"
+                        columnName="account_number"
+                        newDataType="VARCHAR(20)"/>
+
+        <!-- Шаг 3: восстановить уникальное ограничение -->
+        <addUniqueConstraint tableName="account_transfer"
+                             columnNames="account_number"
+                             constraintName="account_transfer_account_number_key"/>
+    </changeSet>
+
+</databaseChangeLog>

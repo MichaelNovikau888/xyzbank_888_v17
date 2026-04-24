@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║              XYZ-Bank — Unified Microservices                 ║
+        ║                                                                  ║
+        ║  Гибридная архитектура: Spring Boot 3 + Quarkus 3              ║
+        ║                                                                  ║
+        ║  ВАЖНО: этот pom — АГРЕГАТОР, он не является parent ни для     ║
+        ║  одного модуля. Каждая группа сервисов имеет своего родителя:   ║
+        ║                                                                  ║
+        ║  Spring Boot (account, antifraud, authorization, transfer,      ║
+        ║               payment-api):                                      ║
+        ║    parent → spring-boot-starter-parent:3.2.2                   ║
+        ║                                                                  ║
+        ║  Quarkus (notification-service, report-service,                 ║
+        ║           history-service-quarkus, profile-service-quarkus):    ║
+        ║    dependencyManagement → quarkus-bom:3.x                      ║
+        ║                                                                  ║
+        ║  Spring + Quarkus нельзя иметь общего parent — у них разные    ║
+        ║  версии зависимостей. Агрегатор решает эту проблему.            ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+
+    <groupId>com.bank</groupId>
+    <artifactId>xyzbank-root</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>XYZ-Bank — Root Aggregator (Spring Boot + Quarkus)</name>
+
+    <modules>
+        <!-- ── Spring Boot сервисы ───────────────────────────────────── -->
+        <module>spring-boot-services</module>
+
+        <!-- ── Quarkus сервисы ──────────────────────────────────────── -->
+        <module>notification-service</module>
+        <module>report-service</module>
+        <module>history-service-quarkus</module>
+        <module>profile-service-quarkus</module>
+        <module>public-info-quarkus</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+</project>

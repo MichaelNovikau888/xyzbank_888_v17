@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Release 0.1.0.0 — начальная схема report-service.
+
+        Ключевые решения:
+          1. Партиционирование RANGE по report_date (день) для обеих таблиц.
+             PostgreSQL автоматически направляет запрос в нужную партицию.
+             Партиции создаются на 3 месяца вперёд (заготовка для планировщика).
+          2. kafka_idempotent_offset — таблица для Exactly-Once:
+             consumer сохраняет (topic, partition, offset) атомарно с бизнес-данными
+             в одной транзакции. Повторная обработка обнаруживается по уникальному
+             индексу ещё до вставки в payment_reports / transfer_reports.
+          3. clientId — BIGINT (= Profile.id из profile-service).
+    -->
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 001: создание схемы report                                          -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="001-create-schema" author="xyz-bank">
+        <sql>CREATE SCHEMA IF NOT EXISTS report;</sql>
+        <rollback>DROP SCHEMA IF EXISTS report CASCADE;</rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 002: таблица payment_reports (PARTITIONED BY RANGE)                 -->
+    <!--                                                                     -->
+    <!-- Liquibase createTable не поддерживает PARTITION BY напрямую —       -->
+    <!-- используем <sql> тег. Hibernate не управляет партиционированием.    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="002-create-payment-reports-partitioned" author="xyz-bank">
+        <sql>
+            CREATE TABLE IF NOT EXISTS report.payment_reports (
+                id               BIGSERIAL       NOT NULL,
+                payment_id       BIGINT          NOT NULL,
+                client_id        BIGINT          NOT NULL,
+                amount           NUMERIC(15,2)   NOT NULL,
+                currency         VARCHAR(3)      NOT NULL,
+                status           VARCHAR(20)     NOT NULL,
+                recipient_account VARCHAR(50),
+                report_date      DATE            NOT NULL,
+                created_at       TIMESTAMP       NOT NULL,
+                CONSTRAINT pk_payment_reports PRIMARY KEY (id, report_date),
+                CONSTRAINT uq_payment_reports_payment_id UNIQUE (payment_id, report_date)
+            ) PARTITION BY RANGE (report_date);
+
+            COMMENT ON TABLE report.payment_reports IS
+                'Отчёты о платежах. Партиционировано по дням (report_date).
+                 client_id = Profile.id из profile-service (BIGINT).';
+
+            CREATE INDEX idx_payment_reports_client_date
+                ON report.payment_reports (client_id, report_date);
+
+            CREATE INDEX idx_payment_reports_date
+                ON report.payment_reports (report_date);
+
+            CREATE INDEX idx_payment_reports_status
+                ON report.payment_reports (status, report_date);
+        </sql>
+        <rollback>DROP TABLE IF EXISTS report.payment_reports CASCADE;</rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 003: партиции payment_reports на текущий и 2 следующих месяца       -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="003-payment-reports-partitions" author="xyz-bank">
+        <sql>
+            -- Текущий месяц
+            CREATE TABLE IF NOT EXISTS report.payment_reports_2026_04
+                PARTITION OF report.payment_reports
+                FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+            -- Следующий месяц
+            CREATE TABLE IF NOT EXISTS report.payment_reports_2026_05
+                PARTITION OF report.payment_reports
+                FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+
+            -- Через два месяца
+            CREATE TABLE IF NOT EXISTS report.payment_reports_2026_06
+                PARTITION OF report.payment_reports
+                FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
+            -- Fallback-партиция для данных вне диапазона
+            CREATE TABLE IF NOT EXISTS report.payment_reports_default
+                PARTITION OF report.payment_reports DEFAULT;
+        </sql>
+        <rollback>
+            DROP TABLE IF EXISTS report.payment_reports_2026_04;
+            DROP TABLE IF EXISTS report.payment_reports_2026_05;
+            DROP TABLE IF EXISTS report.payment_reports_2026_06;
+            DROP TABLE IF EXISTS report.payment_reports_default;
+        </rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 004: таблица transfer_reports (PARTITIONED BY RANGE)                -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="004-create-transfer-reports-partitioned" author="xyz-bank">
+        <sql>
+            CREATE TABLE IF NOT EXISTS report.transfer_reports (
+                id               BIGSERIAL       NOT NULL,
+                transfer_id      BIGINT          NOT NULL,
+                client_id        BIGINT          NOT NULL,
+                transfer_type    VARCHAR(10)     NOT NULL,
+                status           VARCHAR(20)     NOT NULL,
+                amount           NUMERIC(15,2)   NOT NULL,
+                currency         VARCHAR(3)      NOT NULL,
+                recipient_display VARCHAR(100),
+                reason           VARCHAR(500),
+                report_date      DATE            NOT NULL,
+                occurred_at      TIMESTAMP       NOT NULL,
+                CONSTRAINT pk_transfer_reports PRIMARY KEY (id, report_date),
+                CONSTRAINT uq_transfer_reports_transfer_id UNIQUE (transfer_id, report_date)
+            ) PARTITION BY RANGE (report_date);
+
+            COMMENT ON TABLE report.transfer_reports IS
+                'Отчёты о переводах. Партиционировано по дням (report_date).
+                 client_id = Profile.id (BIGINT). status: CREATED/COMPLETED/BLOCKED/CANCELLED.';
+
+            CREATE INDEX idx_transfer_reports_client_date
+                ON report.transfer_reports (client_id, report_date);
+
+            CREATE INDEX idx_transfer_reports_date
+                ON report.transfer_reports (report_date);
+
+            CREATE INDEX idx_transfer_reports_type
+                ON report.transfer_reports (transfer_type, report_date);
+        </sql>
+        <rollback>DROP TABLE IF EXISTS report.transfer_reports CASCADE;</rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 005: партиции transfer_reports                                      -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="005-transfer-reports-partitions" author="xyz-bank">
+        <sql>
+            CREATE TABLE IF NOT EXISTS report.transfer_reports_2026_04
+                PARTITION OF report.transfer_reports
+                FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+            CREATE TABLE IF NOT EXISTS report.transfer_reports_2026_05
+                PARTITION OF report.transfer_reports
+                FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+
+            CREATE TABLE IF NOT EXISTS report.transfer_reports_2026_06
+                PARTITION OF report.transfer_reports
+                FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
+            CREATE TABLE IF NOT EXISTS report.transfer_reports_default
+                PARTITION OF report.transfer_reports DEFAULT;
+        </sql>
+        <rollback>
+            DROP TABLE IF EXISTS report.transfer_reports_2026_04;
+            DROP TABLE IF EXISTS report.transfer_reports_2026_05;
+            DROP TABLE IF EXISTS report.transfer_reports_2026_06;
+            DROP TABLE IF EXISTS report.transfer_reports_default;
+        </rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 006: Exactly-Once таблица для Kafka consumer                        -->
+    <!--                                                                     -->
+    <!-- Стратегия Exactly-Once (без Kafka Transactions):                    -->
+    <!--   Consumer читает сообщение → открывает транзакцию PostgreSQL →     -->
+    <!--   INSERT INTO kafka_idempotent_offset (topic, partition, offset)    -->
+    <!--   → INSERT INTO payment_reports / transfer_reports                  -->
+    <!--   → COMMIT. Если offset уже есть — unique constraint нарушается,   -->
+    <!--   транзакция откатывается, сообщение не обрабатывается повторно.    -->
+    <!--                                                                     -->
+    <!--   Плюс: простота. Минус: не масштабируется для тысяч партиций.      -->
+    <!--   Альтернатива: Kafka Transactions (enable.idempotence=true          -->
+    <!--   + transactional.id) — требует Kafka 0.11+.                        -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="006-kafka-idempotent-offset" author="xyz-bank">
+        <createTable tableName="kafka_idempotent_offset" schemaName="report"
+                     remarks="Exactly-once: хранит обработанные Kafka offsets. Вставляется атомарно с бизнес-данными.">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="topic" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="partition_num" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kafka_offset" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="processed_at" type="TIMESTAMP WITHOUT TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="kafka_idempotent_offset"
+                     schemaName="report"
+                     indexName="uq_kafka_offset"
+                     unique="true">
+            <column name="topic"/>
+            <column name="partition_num"/>
+            <column name="kafka_offset"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,21 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <!--
+        Рефакторинг: account_number BIGINT → VARCHAR(20).
+        Причина: российский номер счёта = 20 цифр, Long.MAX_VALUE = 9_223_372_036_854_775_807 (19 цифр).
+        Хранение 20-значного числа в BIGINT невозможно без обрезки последней цифры.
+    -->
+    <changeSet author="xyz-bank" id="account-number-to-varchar-2024-001">
+        <modifyDataType tableName="account_details"
+                        schemaName="account"
+                        columnName="account_number"
+                        newDataType="VARCHAR(20)"/>
+    </changeSet>
+
+</databaseChangeLog>

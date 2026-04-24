@@ -1,0 +1,299 @@
+groups:
+  - name: xyz_bank_business_critical
+    rules:
+
+      # -- PAYMENT-API --
+      - alert: PaymentCreationStopped
+        expr: rate(payment_created_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: payment-api
+        annotations:
+          summary: "No payments created in last 5 minutes"
+          description: "payment_created_total rate is zero - payment-api may be down or Kafka disconnected."
+
+      - alert: HighPaymentFailureRate
+        expr: |
+          rate(payment_failed_total[5m]) /
+          (rate(payment_created_total[5m]) + rate(payment_failed_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          service: payment-api
+        annotations:
+          summary: "Payment failure rate exceeds 5%"
+          description: "{{ $value | humanizePercentage }} of payment attempts are failing."
+
+      - alert: HighPendingPayments
+        expr: payment_pending_count > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: payment-api
+        annotations:
+          summary: "Too many payments stuck in CREATED status"
+          description: "{{ $value }} payments in CREATED status - processor may be stalled."
+
+      - alert: RaceConditionSpike
+        expr: rate(payment_race_condition_total[1m]) > 100
+        for: 2m
+        labels:
+          severity: info
+          service: payment-api
+        annotations:
+          summary: "High race condition rate - load approaching 100k RPS"
+          description: "{{ $value }}/min race conditions detected. Consider adding Redis first-level cache."
+
+      - alert: AmountLimitViolations
+        expr: rate(payment_amount_limit_exceeded_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          service: payment-api
+        annotations:
+          summary: "Repeated payment amount limit violations"
+          description: "{{ $value }}/min attempts to exceed 10M limit - possible API abuse."
+
+      # -- TRANSFER --
+      - alert: TransferServiceDown
+        expr: rate(transfer_saved_total[5m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: transfer
+        annotations:
+          summary: "No transfers saved in last 5 minutes"
+          description: "transfer_saved_total rate is zero - transfer-service may be down."
+
+      - alert: HighTransferAmountP99
+        expr: transfer_amount_summary{quantile="0.99"} > 500000
+        for: 10m
+        labels:
+          severity: warning
+          service: transfer
+        annotations:
+          summary: "P99 transfer amount is unusually high"
+          description: "99th percentile transfer amount: {{ $value }}. Check for data anomalies."
+
+      - alert: HighTransferDuplicateRate
+        expr: |
+          rate(transfer_idempotent_skipped_total[5m]) /
+          rate(transfer_saved_total[5m]) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          service: transfer
+        annotations:
+          summary: "High duplicate transfer rate (>20%)"
+          description: "More than 20% of Kafka messages are duplicates - check Kafka producer retry config."
+
+      # -- ANTIFRAUD --
+      - alert: AntiFraudBlockingSpike
+        expr: rate(antifraud_blocked_total[5m]) > 10
+        for: 3m
+        labels:
+          severity: critical
+          service: antifraud
+        annotations:
+          summary: "Antifraud blocking rate spike"
+          description: "{{ $value }}/min transfers blocked - possible attack or threshold misconfiguration."
+
+      - alert: HighSuspiciousRate
+        expr: |
+          sum(rate(antifraud_blocked_total[5m])) /
+          sum(rate(antifraud_analyzed_total[5m])) > 0.30
+        for: 5m
+        labels:
+          severity: warning
+          service: antifraud
+        annotations:
+          summary: "More than 30% of transfers blocked"
+          description: "Suspicious rate: {{ $value | humanizePercentage }}. Verify threshold settings."
+
+      # -- AUTHORIZATION --
+      - alert: BruteForceDetected
+        expr: rate(auth_login_failed_total[1m]) > 100
+        for: 1m
+        labels:
+          severity: critical
+          service: authorization
+        annotations:
+          summary: "Possible brute-force attack on login"
+          description: "{{ $value }}/min failed login attempts from the last minute."
+
+      - alert: TokenInvalidSpike
+        expr: rate(auth_token_invalid_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+          service: authorization
+        annotations:
+          summary: "High JWT token validation failure rate"
+          description: "{{ $value }}/min invalid tokens - possible token expiry mass event or tampering."
+
+      - alert: UserRegistrationStopped
+        expr: rate(auth_user_created_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          service: authorization
+        annotations:
+          summary: "No new users registered in 30 minutes"
+          description: "User creation Kafka command may not be reaching authorization-service."
+
+      # -- ACCOUNT --
+      - alert: MassCreditCardBlocking
+        expr: rate(credit_card_blocked_total[5m]) > 20
+        for: 2m
+        labels:
+          severity: warning
+          service: account
+        annotations:
+          summary: "Mass credit card blocking in progress"
+          description: "{{ $value }}/min cards being blocked. Verify this is intentional."
+
+      # -- REPORT-SERVICE (Quarkus) --
+      - alert: ReportCsvGenerationStopped
+        expr: |
+          rate(report_csv_generated_total[10m]) == 0
+          and rate(report_payments_stored_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: report-service
+          stack: quarkus
+        annotations:
+          summary: "CSV reports not generated despite active payments"
+          description: "report_csv_generated_total rate is zero while payments are being stored - CSV endpoint may be broken."
+
+      - alert: HighCsvGenerationLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(report_csv_generation_seconds_bucket[5m])) by (le)
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: report-service
+          stack: quarkus
+        annotations:
+          summary: "CSV report generation p99 latency > 10s"
+          description: "P99 CSV generation time: {{ $value | humanizeDuration }}. Consider adding a DB index on report_date."
+
+      - alert: ReportKafkaDuplicateSpike
+        expr: rate(report_kafka_duplicate_total[5m]) > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: report-service
+          stack: quarkus
+        annotations:
+          summary: "High duplicate Kafka event rate in report-service"
+          description: "{{ $value }}/min duplicate payment events - check outbox relay upstream."
+
+      # -- NOTIFICATION-SERVICE (Quarkus) --
+      - alert: NotificationEmailFailureSpike
+        expr: rate(notification_emails_failed_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: notification-service
+          stack: quarkus
+        annotations:
+          summary: "Mass email delivery failures in notification-service"
+          description: "{{ $value }}/min email delivery failures - check SMTP/MailHog connectivity."
+
+      - alert: NotificationSilent
+        expr: |
+          rate(notification_emails_sent_total[15m]) == 0
+          and rate(payment_created_total[15m]) > 0
+        for: 15m
+        labels:
+          severity: warning
+          service: notification-service
+          stack: quarkus
+        annotations:
+          summary: "No notifications sent despite active payments"
+          description: "notification-service may not be consuming from Kafka or SMTP is down."
+
+      - alert: NotificationHighDuplicateRate
+        expr: rate(notification_idempotent_skipped_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: notification-service
+          stack: quarkus
+        annotations:
+          summary: "High duplicate Kafka message rate in notification-service"
+          description: "{{ $value }}/min idempotent skips - check Kafka producer retry settings."
+
+      # -- HISTORY-SERVICE (Quarkus) --
+      - alert: HistoryWritingStopped
+        expr: rate(history_events_saved_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: history-service
+          stack: quarkus
+        annotations:
+          summary: "History service stopped writing events"
+          description: "No history events saved in 10 minutes - audit trail may be broken."
+
+      - alert: HistoryDlqEventsAppeared
+        expr: increase(history_dlq_events_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: history-service
+          stack: quarkus
+        annotations:
+          summary: "Dead-letter queue events detected in history-service"
+          description: "{{ $value }} DLQ events in last 5 minutes - upstream is sending malformed messages."
+
+      # -- PROFILE-SERVICE (Quarkus) --
+      - alert: ProfileCreationStopped
+        expr: |
+          rate(profile_created_total[15m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: profile-service
+          stack: quarkus
+        annotations:
+          summary: "No new profiles created in 15 minutes"
+          description: "Profile creation Kafka command may not be reaching profile-service."
+
+      - alert: ProfileHighDuplicateRate
+        expr: rate(profile_idempotent_skipped_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          service: profile-service
+          stack: quarkus
+        annotations:
+          summary: "High duplicate Kafka command rate in profile-service"
+          description: "{{ $value }}/min duplicate profile commands - check upstream retry logic."
+
+      # -- PUBLIC-INFO-SERVICE (Quarkus) --
+      - alert: PublicInfoKafkaErrors
+        expr: increase(publicinfo_kafka_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: public-info-quarkus
+          stack: quarkus
+        annotations:
+          summary: "Kafka command processing errors in public-info-quarkus"
+          description: "{{ $value }} Kafka errors in last 5 minutes - check consumer logs."
+
+      - alert: PublicInfoBankCreationStopped
+        expr: rate(publicinfo_bank_details_created_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: info
+          service: public-info-quarkus
+          stack: quarkus
+        annotations:
+          summary: "No BankDetails created in 30 minutes"
+          description: "This may be normal if no upstream commands are sent."

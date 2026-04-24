@@ -1,0 +1,96 @@
+# XYZ-Bank - Prometheus scrape configuration
+#   9 : 5 Spring Boot + 4 Quarkus
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'xyz-bank-local'
+    environment: 'local'
+
+rule_files:
+  - "alerts/business_alerts.yml"
+  - "alerts/technical_alerts.yml"
+
+scrape_configs:
+
+  # -- Spring Boot Services (actuator/prometheus) --
+  - job_name: 'payment-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8079']
+        labels:
+          service: 'payment-api'
+          stack: 'spring-boot'
+
+  - job_name: 'account'
+    metrics_path: '/api/account/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8185']   # management port
+        labels:
+          service: 'account'
+          stack: 'spring-boot'
+
+  - job_name: 'antifraud'
+    metrics_path: '/api/anti-fraud/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8186']
+        labels:
+          service: 'antifraud'
+          stack: 'spring-boot'
+
+  - job_name: 'transfer'
+    metrics_path: '/api/transfer/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8191']
+        labels:
+          service: 'transfer'
+          stack: 'spring-boot'
+
+  - job_name: 'authorization'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8087']
+        labels:
+          service: 'authorization'
+          stack: 'spring-boot'
+
+  # -- Quarkus Services (quarkus-micrometer -> /q/metrics) --
+  - job_name: 'report-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8089']
+        labels:
+          service: 'report-service'
+          stack: 'quarkus'
+
+  - job_name: 'notification-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8087']
+        labels:
+          service: 'notification-service'
+          stack: 'quarkus'
+
+  - job_name: 'history-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8086']
+        labels:
+          service: 'history-service'
+          stack: 'quarkus'
+
+  - job_name: 'profile-service'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8088']
+        labels:
+          service: 'profile-service'
+          stack: 'quarkus'
+
+  - job_name: 'public-info-quarkus'
+    metrics_path: '/q/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8095']
+        labels:
+          service: 'public-info-quarkus'
+          stack: 'quarkus'

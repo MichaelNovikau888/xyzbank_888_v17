@@ -1,0 +1,52 @@
+groups:
+  - name: xyz_bank_technical
+    rules:
+
+      - alert: OutboxEventsPilingUp
+        expr: |
+          sum by (service) (
+            increase(outbox_events_pending_total[5m])
+          ) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox events accumulating - Kafka relay may be stuck"
+          description: "More than 100 unsent outbox events in {{ $labels.service }}."
+
+      - alert: KafkaDuplicatesHigh
+        expr: |
+          sum(rate(antifraud_idempotent_skipped_total[5m])) +
+          sum(rate(transfer_idempotent_skipped_total[5m])) +
+          sum(rate(account_idempotent_skipped_total[5m])) > 200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High total duplicate Kafka message rate across all services"
+          description: "{{ $value }}/min total duplicates - check Kafka consumer group offsets."
+
+      # -- Quarkus-   --
+
+      - alert: QuarkusServiceDown
+        expr: |
+          up{stack="quarkus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Quarkus service {{ $labels.service }} is down"
+          description: "Prometheus cannot scrape {{ $labels.service }} at /q/metrics - service may have crashed."
+
+      - alert: QuarkusKafkaDuplicatesHigh
+        expr: |
+          sum(rate(report_kafka_duplicate_total[5m])) +
+          sum(rate(notification_idempotent_skipped_total[5m])) +
+          sum(rate(history_idempotent_skipped_total[5m])) +
+          sum(rate(profile_idempotent_skipped_total[5m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High total duplicate Kafka message rate across Quarkus services"
+          description: "{{ $value }}/min total duplicates in Quarkus layer - check Kafka consumer group offsets."

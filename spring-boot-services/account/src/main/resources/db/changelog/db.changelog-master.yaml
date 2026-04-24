@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/2024/02/16-create-credit-card-table.yaml
+  - include:
+      file: db/changelog/release-0.2.0.0/create-outbox-events.xml
+
+  - include:
+      file: db/changelog/2024/04/account-number-to-varchar.xml

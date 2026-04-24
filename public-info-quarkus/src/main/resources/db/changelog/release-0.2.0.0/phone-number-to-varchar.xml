@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.0.xsd">
+
+    <!--
+        Рефакторинг: branch.phone_number BIGINT → VARCHAR(20).
+        Причина: номер телефона не является числом — международный формат, ведущие нули.
+    -->
+    <changeSet author="xyz-bank" id="public-info-phone-number-to-varchar-2024-001">
+        <!-- Снять уникальное ограничение перед ALTER COLUMN -->
+        <dropUniqueConstraint tableName="branch"
+                              schemaName="public_info"
+                              constraintName="branch_phone_number_key"/>
+        <modifyDataType tableName="branch"
+                        schemaName="public_info"
+                        columnName="phone_number"
+                        newDataType="VARCHAR(20)"/>
+        <!-- Восстановить уникальное ограничение -->
+        <addUniqueConstraint tableName="branch"
+                             schemaName="public_info"
+                             columnNames="phone_number"
+                             constraintName="branch_phone_number_key"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XYZ-Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --ink2: #13131a;
+    --ink3: #1e1e2a;
+    --gold: #c9a84c;
+    --gold2: #e8c97a;
+    --gold-glow: rgba(201,168,76,0.18);
+    --text: #e8e4d8;
+    --muted: #7a7568;
+    --danger: #c95b5b;
+    --success: #5baa7a;
+    --radius: 14px;
+    --transition: .28s cubic-bezier(.4,0,.2,1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--ink);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── NOISE TEXTURE ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .5;
+  }
+
+  /* ─── LAYOUT ─── */
+  #app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+  .screen { display: none; flex-direction: column; flex: 1; animation: fadeIn .4s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ─── HEADER ─── */
+  header {
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(201,168,76,.12);
+    backdrop-filter: blur(12px);
+    background: rgba(10,10,15,.7);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px; font-weight: 300; letter-spacing: 2px;
+    color: var(--gold2);
+  }
+  .logo span { color: var(--muted); font-weight: 300; }
+  nav { display: flex; gap: 6px; }
+  nav button {
+    background: none; border: none; color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    transition: var(--transition); letter-spacing: .5px;
+  }
+  nav button:hover, nav button.active { color: var(--gold2); background: var(--gold-glow); }
+  .user-badge {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--ink3); border: 1px solid rgba(201,168,76,.15);
+    padding: 8px 16px; border-radius: 40px; font-size: 13px; color: var(--muted);
+  }
+  .user-badge span { color: var(--text); font-weight: 500; }
+  .user-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+
+  /* ─── MAIN ─── */
+  main { flex: 1; padding: 40px 32px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* ─── TITLES ─── */
+  .page-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 42px; font-weight: 300; letter-spacing: 1px;
+    color: var(--gold2); margin-bottom: 6px;
+  }
+  .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 36px; }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--ink2);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative; overflow: hidden;
+    transition: var(--transition);
+  }
+  .card::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .card:hover { border-color: rgba(201,168,76,.2); }
+
+  /* ─── GRID ─── */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .col-span-2 { grid-column: span 2; }
+
+  /* ─── STAT CARD ─── */
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
+  .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 38px; font-weight: 300; color: var(--text); }
+  .stat-value.gold { color: var(--gold2); }
+  .stat-change { font-size: 12px; color: var(--success); margin-top: 6px; }
+  .stat-change.neg { color: var(--danger); }
+
+  /* ─── BANK CARD VISUAL ─── */
+  .bank-card-visual {
+    background: linear-gradient(135deg, #1a1510 0%, #2a2015 40%, #1a1510 100%);
+    border: 1px solid rgba(201,168,76,.3);
+    border-radius: 20px; padding: 32px;
+    position: relative; overflow: hidden;
+    aspect-ratio: 1.586; display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(201,168,76,.1);
+  }
+  .bank-card-visual::before {
+    content: ''; position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(201,168,76,.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .bank-card-visual::after {
+    content: ''; position: absolute;
+    bottom: -80px; left: -40px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(201,168,76,.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .card-chip { width: 44px; height: 34px; background: linear-gradient(135deg, #c9a84c, #8a6a20); border-radius: 6px; position: relative; z-index:1; }
+  .card-chip::after { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(255,255,255,.3); border-radius: 3px; }
+  .card-number { font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: 4px; color: var(--gold2); position: relative; z-index:1; }
+  .card-bottom { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index:1; }
+  .card-name { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: rgba(232,201,122,.7); }
+  .card-expiry { text-align: right; }
+  .card-expiry .label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .card-expiry .value { font-size: 15px; color: var(--gold2); font-family: 'Cormorant Garamond', serif; }
+  .card-logo-area { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: rgba(201,168,76,.6); letter-spacing: 2px; text-align: right; }
+
+  /* ─── FORMS ─── */
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; }
+  input, select {
+    width: 100%; background: var(--ink3);
+    border: 1px solid rgba(255,255,255,.08); border-radius: 10px;
+    color: var(--text); padding: 14px 16px;
+    font-family: 'DM Sans', sans-serif; font-size: 15px;
+    outline: none; transition: var(--transition);
+  }
+  input:focus, select:focus { border-color: rgba(201,168,76,.5); box-shadow: 0 0 0 3px rgba(201,168,76,.08); }
+  input::placeholder { color: var(--muted); }
+  select option { background: var(--ink2); }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 28px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    transition: var(--transition); letter-spacing: .3px;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #c9a84c 0%, #a8882a 100%);
+    color: #0a0a0f; box-shadow: 0 4px 20px rgba(201,168,76,.25);
+  }
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(201,168,76,.35); }
+  .btn-ghost { background: var(--ink3); border: 1px solid rgba(255,255,255,.08); color: var(--text); }
+  .btn-ghost:hover { border-color: rgba(201,168,76,.3); background: var(--gold-glow); color: var(--gold2); }
+  .btn-danger { background: rgba(201,91,91,.15); border: 1px solid rgba(201,91,91,.3); color: #e07070; }
+  .btn-full { width: 100%; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+  /* ─── TRANSACTION LIST ─── */
+  .tx-list { display: flex; flex-direction: column; gap: 1px; }
+  .tx-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; background: var(--ink2);
+    border-radius: 10px; margin-bottom: 6px;
+    transition: var(--transition); cursor: default;
+    border: 1px solid transparent;
+  }
+  .tx-item:hover { border-color: rgba(201,168,76,.12); background: var(--ink3); }
+  .tx-left { display: flex; align-items: center; gap: 14px; }
+  .tx-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .tx-icon.in { background: rgba(91,170,122,.12); }
+  .tx-icon.out { background: rgba(201,91,91,.1); }
+  .tx-icon.card { background: rgba(201,168,76,.1); }
+  .tx-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .tx-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tx-amount { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 500; }
+  .tx-amount.in { color: var(--success); }
+  .tx-amount.out { color: var(--danger); }
+
+  /* ─── TABS ─── */
+  .tabs { display: flex; gap: 4px; background: var(--ink2); border-radius: 10px; padding: 4px; margin-bottom: 28px; }
+  .tab {
+    flex: 1; padding: 10px; text-align: center; cursor: pointer;
+    border-radius: 8px; font-size: 13px; color: var(--muted);
+    transition: var(--transition); border: none; background: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active { background: var(--ink3); color: var(--gold2); border: 1px solid rgba(201,168,76,.2); }
+
+  /* ─── BADGE ─── */
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; letter-spacing: .5px;
+  }
+  .badge-active { background: rgba(91,170,122,.15); color: #6bca8a; border: 1px solid rgba(91,170,122,.2); }
+  .badge-blocked { background: rgba(201,91,91,.1); color: #e07070; border: 1px solid rgba(201,91,91,.2); }
+  .badge-pending { background: rgba(201,168,76,.1); color: var(--gold2); border: 1px solid rgba(201,168,76,.2); }
+
+  /* ─── CARD TYPES ─── */
+  .card-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  .card-type-option {
+    padding: 20px; border-radius: 12px; cursor: pointer;
+    border: 2px solid rgba(255,255,255,.06);
+    background: var(--ink3); text-align: center;
+    transition: var(--transition);
+  }
+  .card-type-option:hover { border-color: rgba(201,168,76,.3); }
+  .card-type-option.selected { border-color: var(--gold); background: var(--gold-glow); }
+  .card-type-icon { font-size: 28px; margin-bottom: 8px; }
+  .card-type-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .card-type-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ─── DIVIDER ─── */
+  .divider { height: 1px; background: rgba(255,255,255,.06); margin: 24px 0; }
+
+  /* ─── NOTIFICATION ─── */
+  .notif {
+    position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+    padding: 16px 22px; border-radius: 12px;
+    font-size: 14px; display: flex; align-items: center; gap: 10px;
+    animation: slideUp .3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    max-width: 320px;
+  }
+  @keyframes slideUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform:none; } }
+  .notif.success { background: rgba(91,170,122,.15); border: 1px solid rgba(91,170,122,.3); color: #6bca8a; }
+  .notif.error { background: rgba(201,91,91,.15); border: 1px solid rgba(201,91,91,.3); color: #e07070; }
+  .notif.info { background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.25); color: var(--gold2); }
+
+  /* ─── PROGRESS STEPS ─── */
+  .steps { display: flex; align-items: center; gap: 0; margin-bottom: 32px; }
+  .step { display: flex; align-items: center; flex: 1; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.1); color: var(--muted); background: var(--ink2);
+    transition: var(--transition);
+  }
+  .step.done .step-num { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+  .step.active .step-num { background: transparent; color: var(--gold2); border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+  .step-label { font-size: 11px; color: var(--muted); margin-left: 8px; letter-spacing: .3px; }
+  .step.active .step-label { color: var(--text); }
+  .step-line { flex: 1; height: 1px; background: rgba(255,255,255,.07); margin: 0 8px; }
+
+  /* ─── LANDING ─── */
+  .landing-hero {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; text-align: center; padding: 60px 32px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,.06) 0%, transparent 60%);
+  }
+  .hero-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 4px; color: var(--gold); margin-bottom: 20px; }
+  .hero-title {
+    font-family: 'Cormorant Garamond', serif; font-size: clamp(52px, 8vw, 88px);
+    font-weight: 300; line-height: 1.1; letter-spacing: -1px;
+    color: var(--text); margin-bottom: 20px;
+  }
+  .hero-title em { color: var(--gold2); font-style: normal; }
+  .hero-sub { font-size: 16px; color: var(--muted); max-width: 460px; line-height: 1.6; margin-bottom: 40px; }
+  .hero-actions { display: flex; gap: 14px; }
+  .hero-features { display: flex; gap: 40px; margin-top: 70px; padding-top: 40px; border-top: 1px solid rgba(201,168,76,.1); }
+  .hero-feature { text-align: center; }
+  .hero-feature-icon { font-size: 28px; margin-bottom: 12px; }
+  .hero-feature-title { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: .5px; }
+  .hero-feature-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── AUTH FORM ─── */
+  .auth-wrap { display: flex; justify-content: center; align-items: center; min-height: 85vh; padding: 40px; }
+  .auth-box { width: 100%; max-width: 440px; }
+  .auth-title { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 300; color: var(--gold2); margin-bottom: 6px; }
+  .auth-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  .auth-switch { text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); }
+  .auth-switch a { color: var(--gold2); cursor: pointer; text-decoration: none; }
+  .auth-switch a:hover { text-decoration: underline; }
+
+  /* ─── TRANSFER FORM ─── */
+  .transfer-amount-display {
+    background: var(--ink3); border: 1px solid rgba(201,168,76,.15); border-radius: 16px;
+    padding: 28px; text-align: center; margin-bottom: 24px;
+  }
+  .amount-input {
+    font-family: 'Cormorant Garamond', serif; font-size: 52px; font-weight: 300;
+    color: var(--gold2); background: none; border: none; outline: none;
+    text-align: center; width: 100%;
+  }
+  .amount-currency { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── RESPONSIVE SPACING ─── */
+  .mb-6 { margin-bottom: 6px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-24 { margin-bottom: 24px; }
+  .mb-32 { margin-bottom: 32px; }
+  .mt-auto { margin-top: auto; }
+  .flex { display: flex; }
+  .gap-12 { gap: 12px; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .text-right { text-align: right; }
+  .text-muted { color: var(--muted); font-size: 13px; }
+  .text-gold { color: var(--gold2); }
+  .fw-500 { font-weight: 500; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    backdrop-filter: blur(8px); z-index: 500;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: var(--ink2); border: 1px solid rgba(201,168,76,.2);
+    border-radius: 20px; padding: 36px; max-width: 480px; width: 100%;
+    animation: fadeIn .3s ease;
+    box-shadow: 0 40px 80px rgba(0,0,0,.6);
+  }
+  .modal-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--gold2); margin-bottom: 6px; }
+  .modal-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  /* ─── MOBILE (≤ 768px) ─── */
+  @media (max-width: 768px) {
+    main { padding: 20px 14px 100px; }  /* bottom: место под таббар */
+
+    /* Header: прячем nav-кнопки, показываем только логотип + user */
+    header { padding: 12px 16px; gap: 8px; }
+    nav { display: none; }              /* навигация переедет в bottom-bar */
+    .user-badge { padding: 6px 10px; font-size: 12px; }
+    .user-badge .dot { width: 6px; height: 6px; }
+
+    /* Grids → одна колонка */
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 12px; }
+    .col-span-2 { grid-column: span 1; }
+
+    /* Landing */
+    .landing-hero { padding: 48px 20px 40px; }
+    .hero-title { font-size: clamp(42px, 12vw, 72px); }
+    .hero-sub { font-size: 15px; }
+    .hero-features { flex-direction: column; gap: 16px; }
+    .hero-actions { flex-direction: column; gap: 10px; }
+    .hero-actions .btn { width: 100%; text-align: center; }
+
+    /* Auth cards */
+    .auth-wrap { padding: 20px 14px; }
+    .auth-card { padding: 28px 20px; border-radius: 20px; }
+
+    /* Bank card visual */
+    .bank-card-visual { border-radius: 18px; padding: 22px 20px 18px; }
+    .card-number { font-size: 15px; letter-spacing: 2px; }
+
+    /* Balance */
+    #main-balance { font-size: clamp(28px, 9vw, 48px); }
+
+    /* Buttons full-width in transfer */
+    .btn { min-height: 48px; }         /* удобно тапать */
+    input, select, textarea { min-height: 48px; font-size: 16px; } /* iOS no-zoom */
+
+    /* Card type grid */
+    .card-type-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* Transfer tabs */
+    .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Tx list */
+    .tx-item { padding: 12px 0; }
+    .tx-title { font-size: 14px; }
+    .tx-amount { font-size: 14px; }
+
+    /* Logout button (в хедере) */
+    header > div:last-child button { display: none; } /* прячем, есть в меню */
+  }
+
+  /* ─── BOTTOM NAVIGATION BAR (мобильный таббар) ─── */
+  @media (max-width: 768px) {
+    #bottom-nav {
+      display: flex;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(19,19,26,.96);
+      border-top: 1px solid rgba(201,168,76,.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    }
+    #bottom-nav button {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 10px; font-family: 'DM Sans', sans-serif;
+      padding: 4px 0; transition: var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #bottom-nav button .bn-icon { font-size: 20px; line-height: 1; }
+    #bottom-nav button.active { color: var(--gold2); }
+    #bottom-nav button.active .bn-icon { filter: drop-shadow(0 0 6px rgba(201,168,76,.5)); }
+  }
+
+  /* На десктопе таббар скрыт */
+  @media (min-width: 769px) {
+    #bottom-nav { display: none; }
+  }
+
+  /* ─── SMALL PHONES (≤ 375px) ─── */
+  @media (max-width: 375px) {
+    main { padding: 16px 10px 90px; }
+    .auth-card { padding: 22px 14px; }
+    .card-number { font-size: 13px; }
+    .logo { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══ SCREEN: LANDING ═══ -->
+<div id="s-landing" class="screen active">
+  <div class="landing-hero">
+    <div class="hero-eyebrow">С 1994 года · Доверие миллионов</div>
+    <h1 class="hero-title">XYZ-<em>Bank</em></h1>
+    <p class="hero-sub">Финансовые решения нового поколения. Переводы, карты и управление счетами — просто и безопасно.</p>
+    <div class="hero-actions">
+      <button class="btn btn-gold" onclick="showScreen('s-register')">Открыть счёт</button>
+      <button class="btn btn-ghost" onclick="showScreen('s-login')">Войти в банк</button>
+    </div>
+    <div class="hero-features">
+      <div class="hero-feature">
+        <div class="hero-feature-icon">🔐</div>
+        <div class="hero-feature-title">Безопасность</div>
+        <div class="hero-feature-sub">256-bit шифрование</div>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">⚡</div>
+        <div class="hero-feature-title">Переводы</div>
+        <div class="hero-feature-sub">Мгновенно · 0₽</div>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">💳</div>
+        <div class="hero-feature-title">Карты</div>
+        <div class="hero-feature-sub">Visa, Mastercard, Мир</div>
+      </div>
+      <div class="hero-feature">
+        <div class="hero-feature-icon">📊</div>
+        <div class="hero-feature-title">Аналитика</div>
+        <div class="hero-feature-sub">Расходы под контролем</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN: LOGIN ═══ -->
+<div id="s-login" class="screen">
+  <header>
+    <div class="logo">XYZ-<span>Bank</span></div>
+    <button class="btn btn-ghost" style="font-size:13px;" onclick="showScreen('s-landing')">← Главная</button>
+  </header>
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-title">Добро пожаловать</div>
+      <div class="auth-sub">Введите данные для входа в личный кабинет</div>
+      <div class="card">
+        <div class="form-group">
+          <label>Email или телефон</label>
+          <input type="text" id="login-email" placeholder="ivan@example.com" value="client@xyz-bank.ru">
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="login-pass" placeholder="••••••••" value="password123">
+        </div>
+        <button class="btn btn-gold btn-full" onclick="doLogin()">Войти в кабинет</button>
+      </div>
+      <div class="auth-switch">Нет аккаунта? <a onclick="showScreen('s-register')">Зарегистрироваться</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN: REGISTER ═══ -->
+<div id="s-register" class="screen">
+  <header>
+    <div class="logo">XYZ-<span>Bank</span></div>
+    <button class="btn btn-ghost" style="font-size:13px;" onclick="showScreen('s-landing')">← Главная</button>
+  </header>
+  <main style="max-width:600px;">
+    <div class="page-title">Открыть счёт</div>
+    <div class="page-sub">Заполните форму — займёт не более 2 минут</div>
+
+    <div class="steps">
+      <div class="step active" id="reg-step-1"><div class="step-num">1</div><div class="step-label">Личные данные</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="reg-step-2"><div class="step-num">2</div><div class="step-label">Паспорт</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="reg-step-3"><div class="step-num">3</div><div class="step-label">Регистрация</div></div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="reg-form-1" class="card">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Имя</label>
+          <input id="r-firstname" type="text" placeholder="Иван">
+        </div>
+        <div class="form-group">
+          <label>Фамилия</label>
+          <input id="r-lastname" type="text" placeholder="Новиков">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Отчество</label>
+          <input id="r-midname" type="text" placeholder="Александрович">
+        </div>
+        <div class="form-group">
+          <label>Дата рождения</label>
+          <input id="r-birth" type="date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="r-email" type="email" placeholder="ivan@example.com">
+      </div>
+      <div class="form-group">
+        <label>Номер телефона</label>
+        <input id="r-phone" type="tel" placeholder="+7 (999) 123-45-67">
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input id="r-pass" type="password" placeholder="Минимум 8 символов">
+      </div>
+      <button class="btn btn-gold" onclick="regNext(2)">Далее →</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="reg-form-2" class="card" style="display:none;">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Серия паспорта</label>
+          <input id="r-pser" type="text" placeholder="4510">
+        </div>
+        <div class="form-group">
+          <label>Номер паспорта</label>
+          <input id="r-pnum" type="text" placeholder="123456">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Кем выдан</label>
+        <input id="r-pissued" type="text" placeholder="УФМС России по г. Москве">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Дата выдачи</label>
+          <input id="r-pdate" type="date">
+        </div>
+        <div class="form-group">
+          <label>Код подразделения</label>
+          <input id="r-pdivision" type="text" placeholder="450-001">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ИНН</label>
+        <input id="r-inn" type="text" placeholder="123456789012">
+      </div>
+      <div class="flex gap-12">
+        <button class="btn btn-ghost" onclick="regNext(1)">← Назад</button>
+        <button class="btn btn-gold" onclick="regNext(3)">Далее →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="reg-form-3" class="card" style="display:none;">
+      <div class="form-group">
+        <label>Город</label>
+        <input id="r-city" type="text" placeholder="Москва">
+      </div>
+      <div class="form-group">
+        <label>Улица</label>
+        <input id="r-street" type="text" placeholder="ул. Тверская">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Дом / корпус</label>
+          <input id="r-house" type="text" placeholder="15А">
+        </div>
+        <div class="form-group">
+          <label>Квартира</label>
+          <input id="r-flat" type="text" placeholder="42">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Индекс</label>
+        <input id="r-index" type="text" placeholder="125009">
+      </div>
+      <div class="flex gap-12">
+        <button class="btn btn-ghost" onclick="regNext(2)">← Назад</button>
+        <button class="btn btn-gold" onclick="doRegister()">Создать счёт ✓</button>
+      </div>
+    </div>
+
+    <div class="auth-switch" style="margin-top:20px;">Уже есть аккаунт? <a onclick="showScreen('s-login')">Войти</a></div>
+  </main>
+</div>
+
+<!-- ═══ SCREEN: DASHBOARD ═══ -->
+<div id="s-dashboard" class="screen">
+  <header>
+    <div class="logo">XYZ-<span>Bank</span></div>
+    <nav>
+      <button class="active" onclick="dashTab('overview')">Обзор</button>
+      <button onclick="dashTab('transfer')">Перевод</button>
+      <button onclick="dashTab('cards')">Карты</button>
+      <button onclick="dashTab('history')">История</button>
+    </nav>
+    <div class="user-badge">
+      <div class="dot"></div>
+      <span id="header-name">Клиент</span>
+    </div>
+  </header>
+  <main>
+
+    <!-- ── TAB: OVERVIEW ── -->
+    <div id="tab-overview">
+      <div class="page-title" id="dash-greeting">Добрый день</div>
+      <div class="page-sub" id="dash-date">Сегодня</div>
+
+      <div class="grid-4" style="margin-bottom:24px;">
+        <div class="card">
+          <div class="stat-label">Основной счёт</div>
+          <div class="stat-value gold" id="main-balance">0 ₽</div>
+          <div class="stat-change">▲ +2.4% за месяц</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Активные карты</div>
+          <div class="stat-value" id="cards-count">0</div>
+          <div class="text-muted" style="margin-top:6px;font-size:12px;">карт выпущено</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Расходы / месяц</div>
+          <div class="stat-value">24 800 ₽</div>
+          <div class="stat-change neg">▼ -1.1% vs прошлый</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Переводов / месяц</div>
+          <div class="stat-value" id="tx-count">0</div>
+          <div class="text-muted" style="margin-top:6px;font-size:12px;">операций</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="flex items-center justify-between mb-24">
+            <div style="font-size:14px;font-weight:500;">Ваша карта</div>
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="dashTab('cards')">Все карты</button>
+          </div>
+          <div class="bank-card-visual" id="main-card-visual">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="card-chip"></div>
+              <div class="card-logo-area" id="main-card-type">VISA</div>
+            </div>
+            <div class="card-number" id="main-card-num">•••• •••• •••• ••••</div>
+            <div class="card-bottom">
+              <div class="card-name" id="main-card-holder">ИМЯ ДЕРЖАТЕЛЯ</div>
+              <div class="card-expiry">
+                <div class="label">VALID THRU</div>
+                <div class="value" id="main-card-exp">••/••</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-ghost" style="flex:1;font-size:13px;" onclick="dashTab('transfer')">Перевести</button>
+            <button class="btn btn-gold" style="flex:1;font-size:13px;" onclick="dashTab('cards')">Заказать карту</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-24">
+            <div style="font-size:14px;font-weight:500;">Последние операции</div>
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="dashTab('history')">Все</button>
+          </div>
+          <div id="recent-tx"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: TRANSFER ── -->
+    <div id="tab-transfer" style="display:none;">
+      <div class="page-title">Перевод средств</div>
+      <div class="page-sub">Мгновенные переводы без комиссии</div>
+      <div class="grid-2">
+        <div>
+          <div class="tabs">
+            <button class="tab active" id="ttab-account" onclick="transferTab('account')">По счёту</button>
+            <button class="tab" id="ttab-card" onclick="transferTab('card')">По карте</button>
+            <button class="tab" id="ttab-phone" onclick="transferTab('phone')">По телефону</button>
+          </div>
+          <div class="card">
+            <div class="transfer-amount-display">
+              <input class="amount-input" id="t-amount" type="number" placeholder="0" min="1">
+              <div class="amount-currency">Российский рубль · RUB</div>
+            </div>
+            <div class="form-group" id="t-to-account-group">
+              <label>Номер счёта получателя</label>
+              <input id="t-account" type="text" placeholder="40817810099910004312">
+            </div>
+            <div class="form-group" style="display:none;" id="t-to-card-group">
+              <label>Номер карты получателя</label>
+              <input id="t-card" type="text" placeholder="4111 1111 1111 1111">
+            </div>
+            <div class="form-group" style="display:none;" id="t-to-phone-group">
+              <label>Номер телефона получателя</label>
+              <input id="t-phone" type="tel" placeholder="+7 (999) 123-45-67">
+            </div>
+            <div class="form-group">
+              <label>Назначение платежа</label>
+              <input id="t-purpose" type="text" placeholder="За услуги / Перевод другу...">
+            </div>
+            <div class="divider"></div>
+            <div class="flex justify-between items-center mb-12">
+              <span class="text-muted">Комиссия</span>
+              <span class="text-gold fw-500">0 ₽</span>
+            </div>
+            <div class="flex justify-between items-center mb-24">
+              <span class="text-muted">Спишется</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);" id="t-total">0 ₽</span>
+            </div>
+            <button class="btn btn-gold btn-full" onclick="doTransfer()">Отправить перевод</button>
+          </div>
+        </div>
+        <div>
+          <div class="card mb-24">
+            <div class="stat-label">Доступно для перевода</div>
+            <div class="stat-value gold" id="t-available">0 ₽</div>
+          </div>
+          <div class="card">
+            <div style="font-size:13px;font-weight:500;margin-bottom:16px;color:var(--muted);">Быстрые получатели</div>
+            <div id="quick-contacts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: CARDS ── -->
+    <div id="tab-cards" style="display:none;">
+      <div class="page-title">Мои карты</div>
+      <div class="page-sub">Управление банковскими картами</div>
+      <div class="grid-2" id="cards-list"></div>
+      <div class="divider"></div>
+      <div style="font-size:16px;font-weight:500;margin-bottom:20px;">Заказать новую карту</div>
+      <div class="card" style="max-width:600px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Выберите тип карты</div>
+        <div class="card-type-grid">
+          <div class="card-type-option selected" onclick="selectCardType(this,'VISA')" data-type="VISA">
+            <div class="card-type-icon">💳</div>
+            <div class="card-type-name">Visa Classic</div>
+            <div class="card-type-sub">Международная · 0₽/год</div>
+          </div>
+          <div class="card-type-option" onclick="selectCardType(this,'MASTERCARD')" data-type="MASTERCARD">
+            <div class="card-type-icon">🌐</div>
+            <div class="card-type-name">Mastercard</div>
+            <div class="card-type-sub">Международная · 0₽/год</div>
+          </div>
+          <div class="card-type-option" onclick="selectCardType(this,'MIR')" data-type="MIR">
+            <div class="card-type-icon">🇷🇺</div>
+            <div class="card-type-name">Мир</div>
+            <div class="card-type-sub">Национальная · 0₽/год</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Имя на карте (латиницей)</label>
+          <input id="new-card-name" type="text" placeholder="IVAN IVANOV" style="text-transform:uppercase;">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Срок действия</label>
+            <select id="new-card-exp">
+              <option value="3">3 года</option>
+              <option value="5" selected>5 лет</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Лимит в день</label>
+            <input id="new-card-limit" type="number" placeholder="100000" value="100000">
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="orderCard()">Выпустить карту</button>
+      </div>
+    </div>
+
+    <!-- ── TAB: HISTORY ── -->
+    <div id="tab-history" style="display:none;">
+      <div class="page-title">История операций</div>
+      <div class="page-sub">Все транзакции по вашим счетам</div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="flex gap-12">
+          <input type="text" placeholder="Поиск по операциям..." id="tx-search" style="flex:1;" oninput="filterTx()">
+          <select id="tx-filter" style="width:160px;" onchange="filterTx()">
+            <option value="all">Все операции</option>
+            <option value="in">Поступления</option>
+            <option value="out">Списания</option>
+            <option value="card">Карточные</option>
+          </select>
+        </div>
+      </div>
+      <div id="full-tx-list"></div>
+    </div>
+
+  </main>
+</div>
+
+</div>
+
+<!-- ─── NOTIFICATION CONTAINER ─── -->
+<div id="notif-container"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   XYZ-Bank Frontend — Real API client
+   Архитектура: state + api() + handlers + render
+   Порты: auth:8087  account:8085  transfer:8092  payment:8079
+════════════════════════════════════════════════════════════════════ */
+
+/* ────────────────────────────────────────────────────────────────
+   КОНФИГ: эндпоинты бэкенда
+──────────────────────────────────────────────────────────────── */
+const API = {
+  auth:     'http://localhost:8087',
+  account:  'http://localhost:8085',
+  transfer: 'http://localhost:8092',
+  payment:  'http://localhost:8079',
+};
+
+/* ────────────────────────────────────────────────────────────────
+   STATE — единственный источник правды
+──────────────────────────────────────────────────────────────── */
+const state = {
+  user:         null,   // { name, initials, email }
+  accounts:     [],     // [{ id, accountNumber, balance, currency }]
+  cards:        [],     // [{ id, maskedNum, type, status, expiry, limit }]
+  transactions: [],     // [{ id, title, date, amount, tag, icon }]
+  selectedCardType: 'VISA',
+  transferType: 'account',
+  loading: false,
+};
+
+/* ────────────────────────────────────────────────────────────────
+   API-ОБЁРТКА — единая точка для всех HTTP-запросов
+──────────────────────────────────────────────────────────────── */
+async function api(url, method = 'GET', body = null, extraHeaders = {}) {
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+    ...extraHeaders,
+  };
+  const opts = { method, headers, mode: 'cors' };
+  if (body) opts.body = JSON.stringify(body);
+
+  setLoading(true);
+  try {
+    const res = await fetch(url, opts);
+
+    if (res.status === 401) {
+      logout();
+      notify('Сессия истекла. Войдите снова.', 'error');
+      return null;
+    }
+    if (res.status === 500) {
+      notify('Ошибка сервера. Попробуйте позже.', 'error');
+      return null;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      notify(err.message || 'Ошибка запроса', 'error');
+      return null;
+    }
+    // 204 No Content
+    if (res.status === 204) return {};
+    return await res.json();
+
+  } catch (e) {
+    notify('Нет соединения с сервером', 'error');
+    return null;
+  } finally {
+    setLoading(false);
+  }
+}
+
+/* retry: одна повторная попытка через 800ms при сетевой ошибке */
+async function apiRetry(url, method, body, extraHeaders) {
+  let result = await api(url, method, body, extraHeaders);
+  if (result === null) {
+    await new Promise(r => setTimeout(r, 800));
+    result = await api(url, method, body, extraHeaders);
+  }
+  return result;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   LOADER
+──────────────────────────────────────────────────────────────── */
+function setLoading(on) {
+  state.loading = on;
+  const el = document.getElementById('global-loader');
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
+/* ────────────────────────────────────────────────────────────────
+   НАВИГАЦИЯ
+──────────────────────────────────────────────────────────────── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  // Показываем мобильный таббар только на дашборде
+  const nav = document.getElementById('bottom-nav');
+  if (nav) nav.style.display = id === 's-dashboard' ? '' : 'none';
+}
+
+function dashTab(tab) {
+  ['overview','transfer','cards','history'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  // Десктоп nav
+  document.querySelectorAll('nav button').forEach((b, i) => {
+    b.classList.toggle('active', ['overview','transfer','cards','history'][i] === tab);
+  });
+  // Мобильный bottom-nav
+  ['overview','transfer','cards','history'].forEach(t => {
+    const btn = document.getElementById('bn-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'cards')   renderCards();
+  if (tab === 'history') renderFullHistory();
+}
+
+function transferTab(t) {
+  state.transferType = t;
+  ['account','card','phone'].forEach(x => {
+    document.getElementById('ttab-' + x).classList.toggle('active', x === t);
+    document.getElementById('t-to-' + x + '-group').style.display = x === t ? '' : 'none';
+  });
+}
+
+/* ────────────────────────────────────────────────────────────────
+   AUTH
+──────────────────────────────────────────────────────────────── */
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { notify('Введите email и пароль', 'error'); return; }
+
+  const data = await apiRetry(
+    API.auth + '/api/v1/auth/login',
+    'POST',
+    { login: email, password: pass }
+  );
+  if (!data) return;
+
+  localStorage.setItem('token', data.token || data.accessToken || data.jwt || '');
+  state.user = {
+    name:     data.name     || data.username || email.split('@')[0],
+    initials: initials(data.name || email),
+    email,
+  };
+  await loadDashboardData();
+  showScreen('s-dashboard');
+  notify('Добро пожаловать, ' + state.user.name.split(' ')[0] + '! 👋', 'success');
+}
+
+async function doRegister() {
+  const fname = document.getElementById('r-firstname').value.trim();
+  const lname = document.getElementById('r-lastname').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const city  = document.getElementById('r-city').value.trim();
+
+  if (!fname || !lname || !email || !pass || !city) {
+    notify('Заполните все обязательные поля', 'error'); return;
+  }
+  if (pass.length < 8) { notify('Пароль — минимум 8 символов', 'error'); return; }
+
+  const data = await apiRetry(
+    API.auth + '/api/v1/auth/register',
+    'POST',
+    { firstName: fname, lastName: lname, email, password: pass, city }
+  );
+  if (!data) return;
+
+  localStorage.setItem('token', data.token || data.accessToken || '');
+  state.user = { name: lname + ' ' + fname, initials: lname[0] + fname[0], email };
+
+  await loadDashboardData();
+  showScreen('s-dashboard');
+  notify('Счёт успешно открыт! Добро пожаловать 🎉', 'success');
+}
+
+function regNext(step) {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('reg-form-' + i).style.display = i === step ? '' : 'none';
+    document.getElementById('reg-step-' + i).className =
+      'step' + (i < step ? ' done' : i === step ? ' active' : '');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  state.user = null;
+  state.accounts = [];
+  state.cards = [];
+  state.transactions = [];
+  showScreen('s-landing');
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ЗАГРУЗКА ДАННЫХ ДАШБОРДА
+──────────────────────────────────────────────────────────────── */
+async function loadDashboardData() {
+  const [accountsData, txData] = await Promise.all([
+    api(API.account + '/api/v1/accounts'),
+    api(API.account + '/api/v1/accounts/transactions'),
+  ]);
+
+  if (accountsData) {
+    state.accounts = Array.isArray(accountsData) ? accountsData : (accountsData.content || []);
+    state.cards    = state.accounts.flatMap(a => a.cards || []);
+  }
+  if (txData) {
+    const list = Array.isArray(txData) ? txData : (txData.content || []);
+    state.transactions = list.map(normalizeTx);
+  }
+  initDashboard();
+}
+
+/* Нормализуем ответ бэкенда в единый формат UI */
+function normalizeTx(t) {
+  const amount = t.amount ?? t.sum ?? 0;
+  const isIn   = amount > 0;
+  return {
+    id:     t.id,
+    title:  t.purpose || t.description || t.title || (isIn ? 'Поступление' : 'Списание'),
+    date:   formatDate(t.createdAt || t.date),
+    amount,
+    tag:    t.type || (isIn ? 'in' : 'out'),
+    icon:   isIn ? '💰' : '💸',
+  };
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ИНИЦИАЛИЗАЦИЯ ДАШБОРДА (только UI, данные уже в state)
+──────────────────────────────────────────────────────────────── */
+function initDashboard() {
+  const u = state.user;
+  if (!u) return;
+
+  document.getElementById('header-name').textContent =
+    u.name.split(' ').slice(0, 2).join(' ').replace(/(\S+)\s(\S).*/, '$1 $2.');
+
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+  const firstName = u.name.split(' ').slice(-1)[0]; // последнее слово = имя
+  document.getElementById('dash-greeting').textContent = greet + ', ' + firstName;
+  document.getElementById('dash-date').textContent =
+    new Date().toLocaleDateString('ru-RU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  updateBalanceDisplay();
+  renderRecentTx();
+  renderQuickContacts();
+  updateMainCard();
+
+  document.getElementById('cards-count').textContent = state.cards.length;
+  document.getElementById('tx-count').textContent    = state.transactions.length;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ОТОБРАЖЕНИЕ БАЛАНСА
+──────────────────────────────────────────────────────────────── */
+function totalBalance() {
+  return state.accounts.reduce((s, a) => s + (a.balance || 0), 0);
+}
+
+function updateBalanceDisplay() {
+  const bal = totalBalance();
+  document.getElementById('main-balance').textContent   = fmt(bal) + ' ₽';
+  document.getElementById('t-available').textContent    = fmt(bal) + ' ₽';
+}
+
+function updateMainCard() {
+  if (!state.cards.length) return;
+  const c = state.cards[0];
+  const num  = document.getElementById('main-card-num');
+  const hold = document.getElementById('main-card-holder');
+  const exp  = document.getElementById('main-card-exp');
+  const type = document.getElementById('main-card-type');
+  if (num)  num.textContent  = c.maskedNum  || c.cardNumber || '•••• •••• •••• ••••';
+  if (hold) hold.textContent = (c.name      || state.user?.name || '').toUpperCase();
+  if (exp)  exp.textContent  = c.expiry     || c.expirationDate || '••/••';
+  if (type) type.textContent = c.type       || c.cardType || '';
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ТРАНЗАКЦИИ
+──────────────────────────────────────────────────────────────── */
+function renderRecentTx() {
+  const wrap = document.getElementById('recent-tx');
+  const last4 = state.transactions.slice(0, 4);
+  if (!last4.length) {
+    wrap.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px;">Операций пока нет</div>';
+    return;
+  }
+  wrap.innerHTML = last4.map(txHTML).join('');
+}
+
+function renderFullHistory() { filterTx(); }
+
+function filterTx() {
+  const q      = (document.getElementById('tx-search')?.value  || '').toLowerCase();
+  const filter =  document.getElementById('tx-filter')?.value  || 'all';
+  const list   = state.transactions.filter(t => {
+    const matchQ = t.title.toLowerCase().includes(q);
+    const matchF = filter === 'all' || t.tag === filter;
+    return matchQ && matchF;
+  });
+  const wrap = document.getElementById('full-tx-list');
+  if (!wrap) return;
+  wrap.innerHTML = list.length
+    ? list.map(txHTML).join('')
+    : '<div class="text-muted" style="text-align:center;padding:40px;">Операций не найдено</div>';
+}
+
+function txHTML(t) {
+  const cls  = t.amount > 0 ? 'in' : 'out';
+  const sign = t.amount > 0 ? '+' : '';
+  return `<div class="tx-item">
+    <div class="tx-left">
+      <div class="tx-icon ${cls}">${t.icon}</div>
+      <div>
+        <div class="tx-title">${t.title}</div>
+        <div class="tx-date">${t.date}</div>
+      </div>
+    </div>
+    <div class="tx-amount ${cls}">${sign}${fmt(t.amount)} ₽</div>
+  </div>`;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   БЫСТРЫЕ КОНТАКТЫ (статика — в будущем из API /contacts)
+──────────────────────────────────────────────────────────────── */
+const quickContacts = [
+  { name: 'Алексей С.', icon: 'А', account: '40817810099910001234' },
+  { name: 'Мария К.',   icon: 'М', account: '40817810099910005678' },
+  { name: 'Дмитрий Н.', icon: 'Д', account: '40817810099910009012' },
+];
+
+function renderQuickContacts() {
+  const wrap = document.getElementById('quick-contacts');
+  wrap.innerHTML = quickContacts.map(c => `
+    <div class="tx-item" onclick="fillTransfer('${c.account}','${c.name}')" style="cursor:pointer;">
+      <div class="tx-left">
+        <div class="tx-icon in" style="font-size:15px;font-weight:600;color:var(--gold2);">${c.icon}</div>
+        <div>
+          <div class="tx-title">${c.name}</div>
+          <div class="tx-date">···${c.account.slice(-8)}</div>
+        </div>
+      </div>
+      <div style="font-size:18px;color:var(--muted);">→</div>
+    </div>
+  `).join('');
+}
+
+function fillTransfer(account, name) {
+  dashTab('transfer');
+  setTimeout(() => {
+    document.getElementById('t-account').value = account;
+    notify('Получатель: ' + name, 'info');
+  }, 100);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   ПЕРЕВОД — debounce чтобы исключить двойную отправку
+──────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  const amtInput = document.getElementById('t-amount');
+  if (amtInput) {
+    amtInput.addEventListener('input', function () {
+      const v = parseFloat(this.value) || 0;
+      document.getElementById('t-total').textContent = fmt(v) + ' ₽';
+    });
+  }
+});
+
+const doTransfer = debounce(async function () {
+  const amt  = parseFloat(document.getElementById('t-amount').value);
+  const purp = document.getElementById('t-purpose').value.trim();
+
+  let to = '';
+  if (state.transferType === 'account') to = document.getElementById('t-account').value.trim();
+  if (state.transferType === 'card')    to = document.getElementById('t-card').value.trim();
+  if (state.transferType === 'phone')   to = document.getElementById('t-phone').value.trim();
+
+  if (!to)              { notify('Введите данные получателя', 'error'); return; }
+  if (!amt || amt <= 0) { notify('Введите корректную сумму',  'error'); return; }
+  if (amt > totalBalance()) { notify('Недостаточно средств', 'error'); return; }
+
+  const account = state.accounts[0];
+  if (!account) { notify('Счёт не найден', 'error'); return; }
+
+  /* Выбираем эндпоинт по типу перевода */
+  const endpoints = {
+    account: API.transfer + '/api/v1/transfers/account',
+    card:    API.transfer + '/api/v1/transfers/card',
+    phone:   API.transfer + '/api/v1/transfers/phone',
+  };
+
+  const body = {
+    accountNumber:    account.accountNumber,
+    accountDetailsId: account.id,
+    amount: amt,
+    purpose: purp || undefined,
+    ...(state.transferType === 'account' ? { recipientAccount: to }  : {}),
+    ...(state.transferType === 'card'    ? { cardNumber:        to }  : {}),
+    ...(state.transferType === 'phone'   ? { phoneNumber:       to }  : {}),
+  };
+
+  const result = await apiRetry(endpoints[state.transferType], 'POST', body);
+  if (!result) return;
+
+  /* Обновляем стейт локально — не ждём следующего poll */
+  if (account) account.balance = (account.balance || 0) - amt;
+  state.transactions.unshift({
+    id: result.id || Date.now(), icon: '💸', tag: 'out',
+    title: purp || ('Перевод · ' + to.slice(-4)),
+    date:  formatDate(new Date().toISOString()),
+    amount: -amt,
+  });
+  document.getElementById('tx-count').textContent = state.transactions.length;
+
+  updateBalanceDisplay();
+  renderRecentTx();
+  clearTransferForm();
+
+  notify(`Перевод ${fmt(amt)} ₽ выполнен ✓`, 'success');
+  setTimeout(() => dashTab('overview'), 1200);
+}, 600);
+
+function clearTransferForm() {
+  ['t-amount','t-account','t-card','t-phone','t-purpose'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('t-total').textContent = '0 ₽';
+}
+
+/* ────────────────────────────────────────────────────────────────
+   КАРТЫ — работа с account-service
+──────────────────────────────────────────────────────────────── */
+function renderCards() {
+  const wrap = document.getElementById('cards-list');
+  const n    = document.getElementById('new-card-name');
+  if (n && state.user) n.value = state.user.name.split(' ').reverse().join(' ').toUpperCase();
+
+  if (!state.cards.length) {
+    wrap.innerHTML = `<div class="card col-span-2" style="text-align:center;padding:48px;">
+      <div style="font-size:48px;margin-bottom:16px;">💳</div>
+      <div style="font-size:16px;font-weight:500;margin-bottom:8px;">Карт пока нет</div>
+      <div class="text-muted">Закажите свою первую карту — это бесплатно</div>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = state.cards.map((c, i) => `
+    <div class="card">
+      <div class="bank-card-visual" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="card-chip"></div>
+          <div class="card-logo-area">${c.type || c.cardType || ''}</div>
+        </div>
+        <div class="card-number">${c.maskedNum || c.cardNumber || '•••• •••• •••• ••••'}</div>
+        <div class="card-bottom">
+          <div class="card-name">${(c.name || state.user?.name || '').toUpperCase()}</div>
+          <div class="card-expiry">
+            <div class="label">VALID THRU</div>
+            <div class="value">${c.expiry || c.expirationDate || ''}</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-between items-center mb-12">
+        <span class="text-muted">Статус</span>
+        <span class="badge ${c.status === 'ACTIVE' || c.status === 'active' ? 'badge-active' : 'badge-blocked'}">
+          ${c.status === 'ACTIVE' || c.status === 'active' ? 'Активна' : 'Заблокирована'}
+        </span>
+      </div>
+      <div class="flex justify-between items-center mb-24">
+        <span class="text-muted">Лимит в день</span>
+        <span class="fw-500">${fmt(c.dailyLimit || c.limit || 0)} ₽</span>
+      </div>
+      <div class="flex gap-12">
+        <button class="btn btn-ghost" style="flex:1;font-size:12px;" onclick="toggleCard(${i})">
+          ${c.status === 'ACTIVE' || c.status === 'active' ? '🔒 Заблокировать' : '🔓 Разблокировать'}
+        </button>
+        <button class="btn btn-danger" style="flex:1;font-size:12px;" onclick="deleteCard(${i})">Удалить</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectCardType(el, type) {
+  document.querySelectorAll('.card-type-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedCardType = type;
+}
+
+const orderCard = debounce(async function () {
+  const nameVal  = (document.getElementById('new-card-name').value  || state.user?.name || '').toUpperCase().trim();
+  const expYears = parseInt(document.getElementById('new-card-exp').value);
+  const limitVal = parseFloat(document.getElementById('new-card-limit').value) || 100000;
+  const account  = state.accounts[0];
+
+  if (!nameVal)  { notify('Введите имя для карты', 'error'); return; }
+  if (!account)  { notify('Счёт не найден',         'error'); return; }
+
+  const result = await apiRetry(
+    API.account + '/api/v1/credit-cards',
+    'POST',
+    {
+      accountId:          account.id,
+      cardType:           state.selectedCardType,
+      holderName:         nameVal,
+      expirationYears:    expYears,
+      dailyLimit:         limitVal,
+    }
+  );
+  if (!result) return;
+
+  /* Добавляем карту в локальный стейт */
+  const card = {
+    id:       result.id,
+    type:     result.cardType      || state.selectedCardType,
+    maskedNum:result.cardNumber    || result.maskedNum || '•••• •••• •••• ••••',
+    name:     result.holderName    || nameVal,
+    expiry:   result.expirationDate|| '',
+    limit:    result.dailyLimit    || limitVal,
+    status:   result.status        || 'ACTIVE',
+  };
+  state.cards.push(card);
+  document.getElementById('cards-count').textContent = state.cards.length;
+  updateMainCard();
+  renderCards();
+  notify(`Карта ${state.selectedCardType} успешно выпущена! 🎉`, 'success');
+}, 600);
+
+const toggleCard = debounce(async function (i) {
+  const card   = state.cards[i];
+  const action = card.status === 'ACTIVE' || card.status === 'active' ? 'block' : 'unblock';
+
+  const result = await api(
+    `${API.account}/api/v1/credit-cards/${card.id}/${action}`,
+    'POST'
+  );
+  if (!result) return;
+
+  card.status = action === 'block' ? 'BLOCKED' : 'ACTIVE';
+  renderCards();
+  notify(action === 'block' ? 'Карта заблокирована' : 'Карта разблокирована',
+         action === 'block' ? 'info' : 'success');
+}, 400);
+
+const deleteCard = debounce(async function (i) {
+  const card = state.cards[i];
+  const result = await api(`${API.account}/api/v1/credit-cards/${card.id}`, 'DELETE');
+  if (result === null) return;
+
+  state.cards.splice(i, 1);
+  document.getElementById('cards-count').textContent = state.cards.length;
+  updateMainCard();
+  renderCards();
+  notify('Карта удалена', 'info');
+}, 400);
+
+/* ────────────────────────────────────────────────────────────────
+   УТИЛИТЫ
+──────────────────────────────────────────────────────────────── */
+function fmt(n) {
+  return Math.abs(n).toLocaleString('ru-RU');
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('ru-RU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+function initials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? parts[0][0] + parts[1][0]
+    : parts[0].slice(0, 2).toUpperCase();
+}
+
+/** debounce: блокирует повторный вызов в течение wait мс */
+function debounce(fn, wait) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), wait);
+  };
+}
+
+function notify(msg, type = 'info') {
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  const el = document.createElement('div');
+  el.className = 'notif ' + type;
+  el.innerHTML = `<span>${icons[type]}</span>${msg}`;
+  document.getElementById('notif-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+</script>
+<!-- ═══ BOTTOM NAV (мобильный таббар) ═══ -->
+<div id="bottom-nav" style="display:none;">
+  <button onclick="dashTab('overview')" id="bn-overview" class="active">
+    <span class="bn-icon">🏠</span>Главная
+  </button>
+  <button onclick="dashTab('transfer')" id="bn-transfer">
+    <span class="bn-icon">💸</span>Перевод
+  </button>
+  <button onclick="dashTab('cards')" id="bn-cards">
+    <span class="bn-icon">💳</span>Карты
+  </button>
+  <button onclick="dashTab('history')" id="bn-history">
+    <span class="bn-icon">📋</span>История
+  </button>
+  <button onclick="logout()" id="bn-logout">
+    <span class="bn-icon">🚪</span>Выйти
+  </button>
+</div>
+
+</body>
+</html>

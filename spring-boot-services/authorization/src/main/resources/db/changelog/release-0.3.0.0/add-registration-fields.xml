@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Phase 2: Self-service registration fields.
+        Добавляем email, full_name, phone_number, status в таблицу users.
+        Все колонки nullable — чтобы не сломать существующих пользователей
+        (profileId-based), созданных через TestDataInitializer.
+    -->
+    <changeSet id="add-registration-fields-to-users" author="xyzbank">
+
+        <addColumn tableName="users">
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="true" unique="true" uniqueConstraintName="uk_users_email"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="full_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="phone_number" type="VARCHAR(20)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+    </changeSet>
+
+</databaseChangeLog>

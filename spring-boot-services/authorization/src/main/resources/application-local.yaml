@@ -1,0 +1,74 @@
+server:
+  port: 8087
+  servlet:
+    context-path: /api/authorization
+management:
+  server:
+    port: 8187
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/postgres
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+  liquibase:
+    default-schema: authorization
+    change-log: db/changelog/db.changelog-master.yaml
+    enabled: true
+  application:
+    name: authorization-app
+  cloud:
+    kubernetes:
+      enabled: false
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: authorization-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.bank.*"
+app:
+  jwt:
+    secret-key: nawEFeYYKPTxjDZOF+eoepmPza+CLhJd+g9m3GHcvro=
+    expiration: 36000000
+topics:
+  auth_login: auth.login
+  auth_login_response: auth.login.response
+  auth_validate: auth.validate
+  auth_validate_response: auth.validate.response
+  user_create: user.create
+  user_create_response: user.create.response
+  user_update: user.update
+  user_update_response: user.update.response
+  user_delete: user.delete
+  user_delete_response: user.delete.response
+  user_get: user.get
+  user_get_response: user.get.response
+  error-logging: error.logs
+logging:
+  level:
+    com.bank.authorization: DEBUG
+    root: INFO

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        Release 0.1.0.0 — начальная схема notification-service.
+
+        Таблицы:
+          1. notification.email_templates    — шаблоны email-уведомлений
+          2. notification.notification_records — история уведомлений по финальным статусам
+
+        Схема: notification (изолирована от других сервисов).
+    -->
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 001: создание схемы notification                                    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="001-create-schema-notification" author="xyz-bank">
+        <sql>CREATE SCHEMA IF NOT EXISTS notification;</sql>
+        <rollback>DROP SCHEMA IF EXISTS notification CASCADE;</rollback>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 002: таблица email_templates                                        -->
+    <!--                                                                     -->
+    <!-- Хранит HTML/текстовые шаблоны для отправки email-уведомлений.      -->
+    <!-- Заполняется через import.sql (dev) или Liquibase data changeset.    -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="002-create-email-templates" author="xyz-bank">
+        <createTable tableName="email_templates" schemaName="notification"
+                     remarks="Шаблоны email-уведомлений. Плейсхолдеры: {payment_id}, {amount}, {currency} и др.">
+            <column name="id" type="BIGSERIAL"
+                    remarks="Суррогатный PK">
+                <constraints primaryKey="true" nullable="false"
+                             primaryKeyName="pk_email_templates"/>
+            </column>
+            <column name="name" type="VARCHAR(100)"
+                    remarks="Уникальное имя шаблона, например: payment_completed, transfer_blocked">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_email_templates_name"/>
+            </column>
+            <column name="subject" type="VARCHAR(255)"
+                    remarks="Тема письма (может содержать emoji)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="TEXT"
+                    remarks="Тело письма с плейсхолдерами в фигурных скобках">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITHOUT TIME ZONE"
+                    remarks="Дата создания записи">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITHOUT TIME ZONE"
+                    remarks="Дата последнего изменения">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 003: таблица notification_records                                   -->
+    <!--                                                                     -->
+    <!-- Хранит историю отправленных уведомлений по финальным статусам.     -->
+    <!-- Финальные статусы: COMPLETED, FAILED, CANCELLED, BLOCKED.          -->
+    <!-- Промежуточные (CREATED, PROCESSING, REVIEW) не записываются.       -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="003-create-notification-records" author="xyz-bank">
+
+        <!-- Sequence для ID (allocationSize=50 в entity) -->
+        <createSequence sequenceName="notification_record_seq"
+                        schemaName="notification"
+                        startValue="1"
+                        incrementBy="50"
+                        remarks="Sequence для notification_records.id"/>
+
+        <createTable tableName="notification_records" schemaName="notification"
+                     remarks="История уведомлений по финальным статусам платежей и переводов">
+            <column name="id" type="BIGINT" defaultValueSequenceNext="notification.notification_record_seq"
+                    remarks="Суррогатный PK из sequence">
+                <constraints primaryKey="true" nullable="false"
+                             primaryKeyName="pk_notification_records"/>
+            </column>
+            <column name="payment_id" type="BIGINT"
+                    remarks="ID платежа (payment-api) или перевода (transfer-service)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_id" type="VARCHAR(100)"
+                    remarks="Идентификатор клиента">
+                <constraints nullable="false"/>
+            </column>
+            <column name="final_status" type="VARCHAR(20)"
+                    remarks="Финальный статус: COMPLETED, FAILED, CANCELLED, BLOCKED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19,2)"
+                    remarks="Сумма операции">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(10)"
+                    remarks="Валюта: RUB, USD, EUR">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient_account" type="VARCHAR(50)"
+                    remarks="Счёт или идентификатор получателя"/>
+            <column name="reason" type="VARCHAR(500)"
+                    remarks="Причина для FAILED/CANCELLED/BLOCKED статусов"/>
+            <column name="notified_at" type="TIMESTAMP WITHOUT TIME ZONE"
+                    remarks="Дата и время отправки уведомления">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Индекс для быстрого поиска уведомлений клиента (GET /api/v1/notifications/{clientId}) -->
+        <createIndex tableName="notification_records"
+                     schemaName="notification"
+                     indexName="idx_notification_records_client_id">
+            <column name="client_id"/>
+        </createIndex>
+
+        <!-- Индекс для поиска по статусу (аналитика, мониторинг) -->
+        <createIndex tableName="notification_records"
+                     schemaName="notification"
+                     indexName="idx_notification_records_status">
+            <column name="final_status"/>
+        </createIndex>
+
+        <!-- Индекс для поиска по payment_id (проверка дублей, отладка) -->
+        <createIndex tableName="notification_records"
+                     schemaName="notification"
+                     indexName="idx_notification_records_payment_id">
+            <column name="payment_id"/>
+        </createIndex>
+
+    </changeSet>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- 004: начальные данные — шаблоны email                              -->
+    <!--                                                                     -->
+    <!-- Prod-данные вносятся через Liquibase, а не через import.sql,       -->
+    <!-- чтобы гарантировать их наличие в любой среде (dev/staging/prod).   -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <changeSet id="004-insert-email-templates" author="xyz-bank">
+
+        <!-- Платёж создан -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="payment_created"/>
+            <column name="subject" value="💳 Платёж создан - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш платёж №{payment_id} на сумму {amount} {currency} успешно создан.&#10;Получатель: {recipient_account}&#10;&#10;Статус: СОЗДАН&#10;Платёж будет обработан в течение 1 рабочего дня.&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Платёж в обработке -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="payment_processing"/>
+            <column name="subject" value="⏳ Платёж в обработке - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш платёж №{payment_id} на сумму {amount} {currency} принят в обработку.&#10;&#10;Ожидаемое время завершения: в течение 24 часов.&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Платёж завершён -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="payment_completed"/>
+            <column name="subject" value="✅ Платёж успешно завершён - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш платёж №{payment_id} на сумму {amount} {currency} успешно завершён!&#10;&#10;Статус: ЗАВЕРШЁН ✅&#10;Получатель: {recipient_account}&#10;Дата и время: {completion_date}&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Платёж заблокирован -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="payment_failed"/>
+            <column name="subject" value="❌ Ошибка обработки платежа - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;К сожалению, ваш платёж №{payment_id} не был обработан.&#10;&#10;Статус: ОШИБКА ❌&#10;Причина: {failure_reason}&#10;&#10;Обратитесь в службу поддержки: support@examplebank.ru&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Платёж отменён -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="payment_cancelled"/>
+            <column name="subject" value="🚫 Платёж отменён - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш платёж №{payment_id} на сумму {amount} {currency} был отменён.&#10;&#10;Причина: {cancellation_reason}&#10;Дата: {cancellation_date}&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Перевод выполнен -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="transfer_completed"/>
+            <column name="subject" value="✅ Перевод выполнен - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш перевод №{transfer_id} успешно выполнен.&#10;&#10;Тип: {transfer_type}&#10;Сумма: {amount} {currency}&#10;Получатель: {recipient_display}&#10;Назначение: {purpose}&#10;Дата и время: {occurred_date}&#10;Статус: ВЫПОЛНЕН ✅&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Перевод заблокирован -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="transfer_blocked"/>
+            <column name="subject" value="❌ Перевод заблокирован - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш перевод №{transfer_id} был заблокирован системой безопасности.&#10;&#10;Сумма: {amount} {currency}&#10;Получатель: {recipient_display}&#10;Причина: {block_reason}&#10;&#10;Деньги не были списаны.&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+        <!-- Перевод отменён -->
+        <insert tableName="email_templates" schemaName="notification">
+            <column name="name"    value="transfer_cancelled"/>
+            <column name="subject" value="🚫 Перевод отменён - Example Bank"/>
+            <column name="body"    value="Уважаемый клиент!&#10;&#10;Ваш перевод №{transfer_id} был отменён.&#10;&#10;Сумма: {amount} {currency}&#10;Получатель: {recipient_display}&#10;Причина: {cancel_reason}&#10;&#10;Деньги не были списаны.&#10;&#10;С уважением,&#10;Example Bank"/>
+            <column name="created_at" valueDate="now()"/>
+            <column name="updated_at" valueDate="now()"/>
+        </insert>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Annotation profile for public-info-quarkus" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="public-info-quarkus" />
+      </profile>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="report-service" />
+      </profile>
+      <profile name="Annotation profile for account" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="account" />
+      </profile>
+      <profile name="Annotation profile for antifraud" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="antifraud" />
+      </profile>
+      <profile name="Annotation profile for authorization" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="authorization" />
+      </profile>
+      <profile name="Annotation profile for payment-api" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="payment-api" />
+      </profile>
+      <profile name="Annotation profile for transfer" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="transfer" />
+      </profile>
+      <profile name="Annotation profile for XYZ-Bank — Root Aggregator (Spring Boot + Quarkus)" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok-mapstruct-binding/0.2.0/lombok-mapstruct-binding-0.2.0.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.5.5.Final/mapstruct-processor-1.5.5.Final.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
+        </processorPath>
+        <module name="history-service-quarkus" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="account" options="-parameters" />
+      <module name="antifraud" options="-parameters" />
+      <module name="authorization" options="-parameters" />
+      <module name="payment-api" options="-parameters" />
+      <module name="public-info-quarkus" options="-parameters" />
+      <module name="report-service" options="-parameters" />
+      <module name="spring-boot-services" options="-parameters" />
+      <module name="transfer" options="-parameters" />
+    </option>
+  </component>
+</project>
