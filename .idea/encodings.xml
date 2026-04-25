@@ -3,6 +3,10 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/history-service-quarkus/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/history-service-quarkus/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/notification-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/notification-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/profile-service-quarkus/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/profile-service-quarkus/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/public-info-quarkus/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/public-info-quarkus/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/report-service/src/main/java" charset="UTF-8" />

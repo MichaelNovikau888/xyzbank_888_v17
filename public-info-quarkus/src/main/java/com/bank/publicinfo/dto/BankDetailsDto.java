@@ -12,9 +12,9 @@ public class BankDetailsDto {
     @NotNull
     private Long inn;
     @NotNull
-    private Long kpp;
+    private String kpp;
     @NotNull
-    private Long corAccount;
+    private String corAccount;
     @Size(max = 180)
     @NotNull
     private String city;

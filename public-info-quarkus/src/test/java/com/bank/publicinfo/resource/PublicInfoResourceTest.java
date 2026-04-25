@@ -52,7 +52,7 @@ class PublicInfoResourceTest {
     @Transactional
     Long persistBank(Long bik) {
         com.bank.publicinfo.entity.BankDetails bd = new com.bank.publicinfo.entity.BankDetails();
-        bd.setBik(bik); bd.setInn(1234567890L); bd.setKpp(123456789L);
+        bd.setBik(bik); bd.setInn(1234567890L); bd.setKpp("123456789");
         bd.setName("Test Bank"); bd.setCity("Москва");
         com.bank.publicinfo.entity.BankDetails.persist(bd); return bd.getId();
     }

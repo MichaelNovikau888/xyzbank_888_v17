@@ -87,7 +87,7 @@ class BankDetailsServiceImplTest {
             Assertions.assertThatThrownBy(() -> service.create(d))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("999999999");
-            verify(repository, never()).persist(any());
+            verify(repository, never()).persist(any(BankDetails.class));
         }
     }
 

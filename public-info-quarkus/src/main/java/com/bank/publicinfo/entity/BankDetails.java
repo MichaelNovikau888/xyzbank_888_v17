@@ -34,10 +34,10 @@ public class BankDetails extends PanacheEntityBase {
     private Long inn;
     @NotNull
     @Column(name = "kpp", nullable = false)
-    private Long kpp;
+    private String kpp;
     @NotNull
     @Column(name = "cor_account", nullable = false)
-    private Long corAccount;
+    private String corAccount;
 
     @Size(max = 180)
     @NotNull

@@ -65,8 +65,8 @@ class AuditInterceptorCdiTest {
         BankDetailsDto d = new BankDetailsDto();
         d.setBik(bik);
         d.setInn(7707083893L);
-        d.setKpp(770701001L);
-        d.setCorAccount(30101810400000000225);
+        d.setKpp("770701001L");
+        d.setCorAccount("30101810400000000225");
         d.setCity("Москва");
         d.setJointStockCompany("ПАО Банк");
         d.setName("XYZ Bank");

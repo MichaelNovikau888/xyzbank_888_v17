@@ -98,11 +98,11 @@
         </dependency>
         <!-- Tests -->
         <!-- Testcontainers — интеграционные тесты с реальной PostgreSQL -->
-        <dependency>
+     <!--   <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-test-postgresql</artifactId>
             <scope>test</scope>
-        </dependency>
+        </dependency>-->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
